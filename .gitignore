@@ -4,6 +4,11 @@ sbatch.sh
 launch_slurm*
 slurm*
 
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+
 # Claude Code (local)
 .claude/
 CLAUDE.md
