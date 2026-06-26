@@ -1,7 +1,7 @@
 [project]
 name = "encoder-baseline"
 version = "0.1.0"
-description = "Add your description here"
+description = "CU2 encoder baseline: CamembertV2 + EDS-NLP doc_classifier for document-level ICD-10 (CIM-10) coding of French clinical notes (PARTAGES project)."
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [
@@ -9,15 +9,19 @@ dependencies = [
     "torch==2.4.1+cu121",
 ]
 
+# edsnlp is pinned to the `classif_head` fork: the eds.doc_classifier / eds.doc_pooler
+# components and the eds.doc_classif metric only exist on that branch.
 [tool.uv.sources]
 edsnlp = { git = "https://github.com/aphp/edsnlp.git", rev = "classif_head" }
-edstoolbox = { git = "https://gitlab.eds.aphp.fr/entrep-t-de-donn-es-de-sant/eds-tools/datasciencetools/eds-toolbox.git" }
 torch = { index = "pytorch" }
 
-[[tool.uv.index]]
-url = "https://gitlab.eds.aphp.fr/api/v4/projects/2378/packages/pypi/simple"
-default = true
-
+# The default index is the public PyPI. torch is pulled from the PyTorch CUDA 12.1 wheel
+# index below. For another CUDA version, change the +cuXXX pin on torch and this URL
+# (see https://pytorch.org/get-started/locally/).
+#
+# Note: the preprocessing notebooks run on the AP-HP Spark/YARN cluster and need PySpark
+# plus the AP-HP-internal `edstoolbox`. These are NOT project dependencies (they are not
+# on public PyPI); AP-HP users install them separately — see docs/preprocessing.md.
 [[tool.uv.index]]
 name = "pytorch"
 url = "https://download.pytorch.org/whl/cu121"
@@ -41,7 +45,6 @@ dev = [
     "datasets>=4.8.4",
     "foldedtensor>=0.4.0",
     "ipykernel>=7.2.0",
-    "pyspark==2.4.3.post5",
     "rich-logger>=0.3.2",
     "tokenizers>=0.22.2",      
     "accelerate>=1.12.0",
@@ -53,7 +56,6 @@ dev = [
     "scikit-learn>=1.8.0",
     "sentencepiece>=0.2.1",
     "transformers>=4.57.3",
-    "edstoolbox",
     "ruff>=0.14.14",
     "pre-commit>=4.5.1",
 ]
