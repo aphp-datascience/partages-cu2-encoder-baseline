@@ -1,0 +1,9 @@
+.ipynb*
+artifacts
+sbatch.sh
+launch_slurm*
+slurm*
+
+# Claude Code (local)
+.claude/
+CLAUDE.md

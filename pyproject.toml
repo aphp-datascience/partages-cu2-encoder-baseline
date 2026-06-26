@@ -1,0 +1,59 @@
+[project]
+name = "encoder-baseline"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "edsnlp",
+    "torch==2.4.1+cu121",
+]
+
+[tool.uv.sources]
+edsnlp = { git = "https://github.com/aphp/edsnlp.git", rev = "classif_head" }
+edstoolbox = { git = "https://gitlab.eds.aphp.fr/entrep-t-de-donn-es-de-sant/eds-tools/datasciencetools/eds-toolbox.git" }
+torch = { index = "pytorch" }
+
+[[tool.uv.index]]
+url = "https://gitlab.eds.aphp.fr/api/v4/projects/2378/packages/pypi/simple"
+default = true
+
+[[tool.uv.index]]
+name = "pytorch"
+url = "https://download.pytorch.org/whl/cu121"
+explicit = true
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+extend-exclude = ["*.ipynb"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B"]
+ignore = []
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[dependency-groups]
+dev = [
+    "datasets>=4.8.4",
+    "foldedtensor>=0.4.0",
+    "ipykernel>=7.2.0",
+    "pyspark==2.4.3.post5",
+    "rich-logger>=0.3.2",
+    "tokenizers>=0.22.2",      
+    "accelerate>=1.12.0",
+    "confit>=0.10.2",
+    "lxml>=6.0.2",
+    "matplotlib>=3.10.8",
+    "openpyxl>=3.1.5",
+    "pandas>=2.3.3",
+    "scikit-learn>=1.8.0",
+    "sentencepiece>=0.2.1",
+    "transformers>=4.57.3",
+    "edstoolbox",
+    "ruff>=0.14.14",
+    "pre-commit>=4.5.1",
+]

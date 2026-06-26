@@ -1,0 +1,165 @@
+vars:
+  train_path: "/data/scratch/ldedieu/CU2/encoder_baseline/MISTRAL/v1_das_mdp" #"/data/scratch/ldedieu/CU2/encoder_baseline/train/mistral"
+  synth_path: "/data/scratch/ldedieu/CU2/encoder_baseline/train/syn"
+  val_path: "/data/scratch/ldedieu/CU2/encoder_baseline/MISTRAL/test_v1_das" ##"/data/scratch/ldedieu/CU2/encoder_baseline/PARHAF"
+  label_attr: ["dp", "das", "mdp"]
+  syn_label_attr: ["dp"]
+  max_step: 3000
+  validation_interval: 1000
+
+# 🤖 PIPELINE DEFINITION
+nlp:
+  '@core': pipeline
+  lang: eds
+
+  components:
+    doc_classifier:
+      '@factory': eds.doc_classifier
+      heads:
+        dp:       
+          '@misc': eds.single_label_head
+          labels: "/export/home/ldedieu/CU2/encoder-baseline/data/valid_labels_all_dp.pkl"
+          loss: "ce"
+          hidden_size: 1024
+          activation_mode: "gelu"
+          dropout_rate: 0.05
+          layer_norm: true
+          loss_weight: 1.0
+        das:       
+          '@misc': eds.multi_label_head
+          labels: "/export/home/ldedieu/CU2/encoder-baseline/data/valid_labels_all_das.pkl"
+          loss: "bce"
+          selection: "threshold"     
+          threshold: 0.5
+          hidden_size: 1024
+          activation_mode: "gelu"
+          dropout_rate: 0.05
+          layer_norm: true
+          loss_weight: 1.0
+        mdp:       
+          '@misc': eds.single_label_head
+          labels: "/export/home/ldedieu/CU2/encoder-baseline/data/valid_labels_all_mdp.pkl"
+          loss: "ce"
+          hidden_size: 1024
+          activation_mode: "gelu"
+          dropout_rate: 0.05
+          layer_norm: true
+          loss_weight: 1.0
+          
+      embedding:
+        '@factory': eds.doc_pooler
+        pooling_mode: "attention"
+        embedding:
+          '@factory': eds.transformer
+          model: "PARTAGES-dev/PARTAGES-camembert-large" #"almanach/camembertv2-base" # "prajjwal1/bert-tiny" #
+          window: 256
+
+          
+    doc_classifier_syn: ${ nlp.components.doc_classifier }
+
+# 📈 SCORER
+scorer:
+  diag:
+    '@metrics': eds.doc_classif
+    label_attr: ${vars.label_attr}
+  batch_size: "150 docs"
+  speed: true
+
+# 🎛️ OPTIMIZER
+optimizer:
+  "@core": optimizer !draft
+  optim: torch.optim.AdamW
+  total_steps: ${vars.max_step}
+  groups:
+  - selector: "doc_classifier[.]embedding[.]embedding"
+    lr:
+      "@schedules": linear
+      warmup_rate: 0.15
+      start_value: 0
+      max_value: 3e-05
+    weight_decay: 0.0
+  - selector: ".*"
+    lr:
+      "@schedules": linear
+      warmup_rate: 0.1
+      start_value: 0
+      max_value: 0.0005
+    weight_decay: 0.0
+  module: ${ nlp }
+
+# 📚 DATA
+train_data:
+  data:
+    '@readers': parquet
+    path: ${vars.train_path}
+    converter: omop
+    doc_attributes: ${vars.label_attr}
+  shuffle: fragment
+  batch_size: "32 docs"
+  sub_batch_size: "12000 words"
+  pipe_names: "doc_classifier"
+  
+syn_data:
+  data:
+    '@readers': parquet
+    path: ${vars.synth_path}
+    converter: omop
+    doc_attributes: ${vars.syn_label_attr}
+  shuffle: dataset
+  batch_size: "128 docs"
+  pipe_names: "doc_classifier_syn"
+  
+val_data:
+  '@readers': parquet
+  path: ${vars.val_path}
+  converter: omop
+  doc_attributes: ${vars.label_attr}
+
+# 📊 LOGGER
+logger:
+- json
+- '@loggers': rich
+  fields:
+    step: {}
+    "per_pipe/(.*)/results/loss":
+      goal: lower_is_better
+      format: "{:.2e}"
+      goal_wait: 2
+      name: "loss"
+
+    "validation/(.*?)/dp/micro/f$":
+      goal: higher_is_better
+      format: "{:.2%}"
+      goal_wait: 1
+      name: "dp_ma_f"
+    "validation/(.*?)/das/micro/f$":
+      goal: higher_is_better
+      format: "{:.2%}"
+      goal_wait: 1
+      name: "das_mi_f"
+    "validation/(.*?)/mdp/micro/f$":
+      goal: higher_is_better
+      format: "{:.2%}"
+      goal_wait: 1
+      name: "mdp_ma_f"
+
+# 🚀 TRAIN SCRIPT OPTIONS
+train:
+  nlp: ${nlp}
+  train_data:
+    - ${ train_data }
+    - ${ syn_data }
+  val_data: ${val_data}
+  scorer: ${scorer}
+  optimizer: ${optimizer}
+  loss_scales:
+    doc_classifier: 1.
+    doc_classifier_syn: 0.1
+  max_steps: ${vars.max_step}
+  validation_interval: ${vars.validation_interval}
+  grad_max_norm: 1.0
+  output_dir: "artifacts"
+  mixed_precision: "bf16"
+  num_workers: 16
+  logger: ${logger}
+  cpu: False
