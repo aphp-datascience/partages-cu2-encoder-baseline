@@ -52,7 +52,7 @@ Run them from the repo root as modules:
 | `python -m scripts.preprocess_parhaf`            | `preprocess_PARHAF.ipynb`       | PARHAF parquet (`HF_TOKEN` required)     |
 | `python -m scripts.preprocess_synonyms`          | `preprocess_synonyms.ipynb`     | synthetic parquet                        |
 
-Absolute paths (user, scratch dirs, synonym pickle) are constants at the top of each script —
+Absolute paths (user, scratch dirs) are constants at the top of each script —
 edit them for your environment. `build_labels` only needs pandas (no Spark) and reproduces the
 committed label artifacts exactly. The `build_dataset.ipynb` notebook has not been scripted yet
 (it is work-in-progress).
@@ -93,8 +93,9 @@ the primary diagnosis code as `dp`. Writes parquet (`note_id`, `note_text`, `dp`
 
 ### `preprocess_synonyms.ipynb`
 Builds the synthetic dataset: takes the valid `dp` codes from the referential, loads the
-synonym/augmentation pickle, keeps only rows whose code is a valid `dp`, and writes parquet
-(`note_id`, `note_text`, `dp`). This feeds the down-weighted `doc_classifier_syn` head.
+synonym/augmentation pickle (`data/synonyms.pkl`), keeps only rows whose code is a valid `dp`,
+and writes parquet (`note_id`, `note_text`, `dp`). This feeds the down-weighted
+`doc_classifier_syn` head.
 
 ### `build_dataset.ipynb`
 Unions the per-source datasets, reconciles the label sets across train / val / synthetic,

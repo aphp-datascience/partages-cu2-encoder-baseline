@@ -20,8 +20,8 @@ USER = "ldedieu"
 SCRATCH = Path(f"/data/scratch/{USER}/CU2/encoder_baseline")
 HDFS_BASE = "CU2/encoder_baseline"
 
-# The synonym source pickle lives outside this repo (built by the binary_model project).
-SYNONYMS_PICKLE = Path("../binary_model/data/V2_avril_2026/phase1_df_pos.pkl")
+# The synonym source pickle shipped in the repo (data/).
+SYNONYMS_PICKLE = Path(__file__).resolve().parent.parent / "data" / "synonyms.pkl"
 
 
 def main() -> None:
