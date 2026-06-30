@@ -54,8 +54,8 @@ Run them from the repo root as modules:
 
 Absolute paths (user, scratch dirs) are constants at the top of each script —
 edit them for your environment. `build_labels` only needs pandas (no Spark) and reproduces the
-committed label artifacts exactly. The `build_dataset.ipynb` notebook has not been scripted yet
-(it is work-in-progress).
+committed label artifacts exactly. `build_dataset.ipynb` (dataset-driven label spaces and class
+weights) has not been scripted — it stays a notebook.
 
 ## Notebooks
 
@@ -98,10 +98,17 @@ and writes parquet (`note_id`, `note_text`, `dp`). This feeds the down-weighted
 `doc_classifier_syn` head.
 
 ### `build_dataset.ipynb`
-Unions the per-source datasets, reconciles the label sets across train / val / synthetic,
-computes label frequencies, and builds the `label2id` / `id2label` mappings and the
-`valid_labels_dp.pkl` / `label_freq_dict_dp.pkl` artifacts.
+Derives the per-head label artifacts from the **datasets** (whereas `valid_labels.ipynb` derives
+them from the referential):
 
-> ⚠️ This notebook is the most in-flux of the set (it carries work-in-progress cells for the
-> multi-head `das` / `mdp` extension and several commented-out branches). Read it carefully
-> before relying on a specific output path.
+- **Label spaces** `valid_labels_{dp,das,mdp}.pkl` — the union of codes seen across the datasets,
+  so every observed code is scoreable. `dp` = train ∪ synthetic ∪ test; `das` / `mdp` = train ∪
+  test (only MISTRAL carries `das` / `mdp`).
+- **Class-weight frequencies** `label_freq_dict_{dp,das,mdp}.pkl` — document frequency per code,
+  counted on the **real train** set (MISTRAL) only; synthetic and validation data do not
+  contribute.
+- The `label2id` / `id2label` mappings (`label2id.pkl`, `id2label.pkl`).
+
+It also prints label-coverage diagnostics (which codes are unique to a single dataset). It writes
+no parquet — `prepocess_MISTRAL*` and `preprocess_synonyms` already materialise the datasets the
+config reads. Run it last, after the per-source notebooks.
