@@ -14,6 +14,24 @@ Training reads three parquet datasets, all in **OMOP** layout (read with EDS-NLP
 | Synthetic   | `synth_path` | Synonym augmentation  | `dp` only          | Down-weighted (`loss_scales` 0.1)  |
 | Validation  | `val_path`   | MISTRAL test split    | `dp`, `das`, `mdp` | PARHAF is an alternative `dp`-only val set |
 
+### Availability
+
+None of these datasets are AP-HP-private — they are usable by any PARTAGES partner:
+
+- **MISTRAL** (train + test split) is shared on a **Google Drive accessible to all PARTAGES
+  project members**. It is model-generated data, not real patient records.
+- **Synthetic** synonyms are **shipped in this repo** (`data/synonyms.pkl`, pushed to GitHub) and
+  derived from public referentials, so every partner can use them. `scripts.preprocess_synonyms`
+  turns that pickle into the training parquet (`note_text` = the synonym label, `dp` = the code).
+  The pipeline that *builds* `synonyms.pkl` itself lives in a separate repo
+  (`icd-synonym-qualification`, source `phase3_df_pos`) that is not yet public.
+- **PARHAF** (optional `dp`-only validation set) is the public `HealthDataHub/PARHAF` dataset on
+  the Hugging Face Hub. It is **gated**: request access and set `HF_TOKEN` (see
+  [preprocessing.md](preprocessing.md)).
+
+If you want to train on **your own clinical notes** instead, see
+[*Using your own data*](training.md#using-your-own-data) in the training guide.
+
 ### Parquet schema
 
 Each row is one clinical note:

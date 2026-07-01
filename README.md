@@ -72,18 +72,30 @@ Notes:
   `edstoolbox`; these are **not** project dependencies (AP-HP only) — see
   [docs/preprocessing.md](docs/preprocessing.md).
 
+## Data
+
+The datasets are **not AP-HP-private** — they are usable by any PARTAGES partner: **MISTRAL**
+(train/test) is shared on the PARTAGES Google Drive, the **synonym** augmentation is shipped in
+this repo (`data/synonyms.pkl`, built from public referentials), and **PARHAF** (optional
+validation) is the gated `HealthDataHub/PARHAF` dataset on Hugging Face. You can also **train on
+your own clinical notes** — see [*Using your own data*](docs/training.md#using-your-own-data).
+Full schema and label details are in [docs/data.md](docs/data.md).
+
 ## Quickstart
 
 ```bash
 # 1. Install
 uv sync
 
-# 2. Edit the absolute paths and the model name in configs/config.yml (see docs/training.md)
+# 2. Get the data: download MISTRAL from the PARTAGES Drive, or bring your own parquet
+#    (docs/training.md#using-your-own-data). Schema: docs/data.md
 
-# 3. Train
+# 3. Edit the absolute paths and the model name in configs/config.yml (see docs/training.md)
+
+# 4. Train
 uv run python -m edsnlp.train --config configs/config.yml --seed 42
 
-# 4. Score the trained model (see docs/inference.md)
+# 5. Score the trained model (see docs/inference.md)
 ```
 
 ## Repository layout

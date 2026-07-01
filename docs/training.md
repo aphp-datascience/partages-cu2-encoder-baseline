@@ -65,6 +65,64 @@ is `artifacts/model-last`.
   Hub. The public `almanach/camembertv2-base` is a drop-in alternative.
 - `train.output_dir` — where checkpoints go.
 
+## Using your own data
+
+You do **not** need MISTRAL/PARHAF or the AP-HP Spark notebooks to train. If you have your own
+clinical notes, the whole path is:
+
+**1. Materialise your notes as parquet** matching the schema in
+[data.md](data.md#parquet-schema) — one row per note, with `note_text` plus the label
+column(s) you are training (`dp`, and optionally `das` / `mdp`). Any tool that writes parquet
+works (e.g. `pandas.DataFrame.to_parquet`); Spark is not required.
+
+**2. Pick a config to start from.**
+
+- If you only have `dp`, start from [`configs/config_dp.yml`](../configs/config_dp.yml)
+  (single head, public transformer).
+- If you also have `das` / `mdp`, start from [`configs/config.yml`](../configs/config.yml).
+
+**3. Decide what to do about the synthetic (`dp`) head.** Both configs add a second
+`doc_classifier_syn` component fed from `vars.synth_path`, and `train.train_data` is
+`[train_data, syn_data]`. This is a down-weighted `dp`-only augmentation. You have three options:
+
+- **Reuse the shipped synonyms** (simplest, and `dp`-only so it fits any `dp` head): the source
+  `data/synonyms.pkl` is in this repo and built from public referentials.
+  `scripts.preprocess_synonyms` writes it to a `synth_path` parquet — point `vars.synth_path`
+  there and you're done.
+- **Bring your own synonym set.** The synthetic parquet is just the OMOP schema restricted to
+  `dp`: two columns, `note_text` (the synonym / augmented text) and `dp` (its single ICD-10
+  code). `vars.syn_label_attr` stays `["dp"]`. Any parquet with those columns works.
+- **Train without it.** If you don't provide a `synth_path`, training **will fail** (the reader
+  can't open an empty path), so you must actively remove the component:
+  - delete the `syn_data:` block,
+  - set `train.train_data` to just `[${ train_data }]`,
+  - delete the `doc_classifier_syn` component and its `loss_scales` entry.
+
+**4. Regenerate the label spaces for your codes.** Each head loads its label space from a
+`.pkl` (the `labels:` key). Two options:
+
+- **Full CIM-10 referential** (recommended, matches the shipped setup): run
+  `python -m scripts.build_labels` — pandas only, no Spark — to (re)produce
+  `data/valid_labels_all_{dp,das,mdp}.pkl`. This is independent of your data.
+- **Your own code set**: pickle a plain `list[str]` of the codes you want each head to predict
+  and point the head's `labels:` at it. Any code your data uses that is missing from this list
+  is unscoreable, so make sure it is a superset of the codes present in your parquet.
+
+  If you use `config_dp.yml`'s `class_weights:`, also regenerate
+  `data/label_freq_dict_dp.pkl` — a `{code: document_count}` dict counted on your train set —
+  or remove the `class_weights:` key to train unweighted.
+
+**5. Edit the paths and model** as in [*Before you run*](#before-you-run-things-to-edit):
+`vars.train_path`, `vars.val_path`, each head's `labels:`, and `train.output_dir`. Keep the
+public `almanach/camembertv2-base` transformer unless you have access to
+`PARTAGES-dev/PARTAGES-camembert-large`.
+
+**6. Train:**
+
+```bash
+uv run python -m edsnlp.train --config configs/config_dp.yml --seed 42
+```
+
 ## Config walkthrough
 
 ### `vars`
