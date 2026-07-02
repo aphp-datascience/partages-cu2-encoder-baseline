@@ -44,41 +44,9 @@ eds.doc_pooler         attention pooling → one embedding per document
 eds.doc_classifier     one classification head per label (dp / das / mdp)
 ```
 
-```mermaid
-%%{init: {"theme":"base","themeVariables":{"fontFamily":"ui-sans-serif, system-ui, sans-serif","fontSize":"13px","lineColor":"#94a3b8"}}}%%
-flowchart LR
-    TOK(["Document tokens"]) --> ENC
+![Model architecture: document tokens → eds.transformer + eds.doc_pooler → document embedding → dp / das / mdp classification heads](docs/architecture.svg)
 
-    subgraph TRUNK ["eds.transformer + eds.doc_pooler"]
-      direction LR
-      ENC("<b>Encoder</b><br/><small>eds.transformer</small>")
-      EMB(["Token embeddings"])
-      POOL("<b>Pooler</b><br/><small>eds.doc_pooler · attention</small>")
-      ENC --> EMB --> POOL
-    end
-
-    POOL --> DOC(["Document embedding"])
-
-    HDP("<b>dp</b> — 13 358 classes<br/><small>single-label · CE</small>")
-    HDAS("<b>das</b> — 40 333 classes<br/><small>multi-label · BCE</small>")
-    HMDP("<b>mdp</b> — 719 classes<br/><small>single-label · CE</small>")
-
-    DOC --> HDP --> ODP(["1 dp"])
-    DOC --> HDAS --> ODAS(["0–N das"])
-    DOC --> HMDP --> OMDP(["1 mdp"])
-
-    classDef data fill:#64748b,stroke:#475569,color:#f8fafc;
-    classDef proc fill:#1e293b,stroke:#334155,color:#f8fafc;
-    classDef hdp fill:#2563eb,stroke:#1d4ed8,color:#ffffff;
-    classDef hdas fill:#7c3aed,stroke:#6d28d9,color:#ffffff;
-    classDef hmdp fill:#0891b2,stroke:#0e7490,color:#ffffff;
-    class TOK,EMB,DOC,ODP,ODAS,OMDP data;
-    class ENC,POOL proc;
-    class HDP hdp;
-    class HDAS hdas;
-    class HMDP hmdp;
-    style TRUNK fill:none,stroke:#cbd5e1,stroke-width:1px,stroke-dasharray:5 4,color:#64748b;
-```
+<sub>Diagram source: [`docs/architecture.mmd`](docs/architecture.mmd) (Mermaid). Regenerate `docs/architecture.svg` after editing.</sub>
 
 Two classifier components **share their weights** through a confit reference:
 `doc_classifier` (trained on real data) and `doc_classifier_syn` (trained on synthetic
@@ -169,6 +137,11 @@ You can also run ruff directly:
 uv run ruff check .              # lint (add --fix to auto-fix)
 uv run ruff format .             # format
 ```
+
+Work on a **feature branch** rather than committing to `main`, then open a pull request against
+`main`. Name the branch `<type>/<short-description>`, reusing the commit-type prefixes
+(`feat/`, `fix/`, `docs/`, `refactor/`, `chore/`) — for example `feat/das-synthetic-head` or
+`docs/architecture-diagram`.
 
 Please make sure `pre-commit run --all-files` passes before opening a pull request.
 
