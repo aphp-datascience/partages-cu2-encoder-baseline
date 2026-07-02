@@ -48,9 +48,32 @@ uv run python -m edsnlp.train --config configs/config.yml \
 Checkpoints are written to `output_dir` (`artifacts/` by default, gitignored). The final model
 is `artifacts/model-last`.
 
+### Multi-GPU
+
+For data-parallel training across several GPUs, launch with 🤗 [`accelerate`](https://huggingface.co/docs/accelerate)
+instead of `python -m`. It spawns one training process per GPU (DDP); everything after `-m` is
+the same `edsnlp.train` command, so CLI overrides still apply:
+
+```bash
+uv run accelerate launch \
+    --num_processes=<n_gpu> \
+    -m edsnlp.train --config configs/config.yml --seed 42
+```
+
+> `accelerate` ships in the **dev dependency group** (installed by `uv sync`). If you installed
+> without dev extras, add it first: `uv add accelerate`.
+
+- **`--num_processes`** — number of GPUs (one process each). Use `1` (or plain `python -m`) for
+  a single GPU.
+- **Effective batch size scales with the number of GPUs**: the `batch_size` in `train_data` /
+  `syn_data` is *per process*, so N GPUs means N× the global batch. Adjust `train.max_steps`
+  and the learning rates if you want to match a single-GPU run.
+- **`num_workers`** in the `train:` block is *per process* too — N GPUs × `num_workers`
+  dataloader workers can oversubscribe the CPUs; lower it if needed.
+
 > Training is meant to run on a GPU. On the AP-HP cluster it is launched via SLURM; the
 > `sbatch.sh` / `launch_slurm*` scripts are machine-local and gitignored — write your own for
-> your scheduler, calling the `edsnlp.train` command above.
+> your scheduler, calling the single- or multi-GPU `edsnlp.train` command above.
 
 ## Before you run: things to edit
 
