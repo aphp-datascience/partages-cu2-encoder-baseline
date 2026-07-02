@@ -109,6 +109,33 @@ docs/                  # this documentation
 pyproject.toml         # dependencies (uv)
 ```
 
+## Contributing
+
+Contributions from PARTAGES partners are welcome. If you clone the repo and want to propose a
+pull request, install the [pre-commit](https://pre-commit.com/) hooks once after `uv sync` so
+your changes are linted and formatted automatically on every commit:
+
+```bash
+uv run pre-commit install        # register the git hook (one-time)
+```
+
+The hooks run [ruff](https://docs.astral.sh/ruff/) — the linter (with import sorting and
+auto-fix) and the formatter (line length 88, double quotes; notebooks excluded). To check the
+whole tree without committing:
+
+```bash
+uv run pre-commit run --all-files
+```
+
+You can also run ruff directly:
+
+```bash
+uv run ruff check .              # lint (add --fix to auto-fix)
+uv run ruff format .             # format
+```
+
+Please make sure `pre-commit run --all-files` passes before opening a pull request.
+
 ## License
 
 Apache License 2.0 — see [LICENSE](LICENSE).
