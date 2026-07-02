@@ -92,10 +92,18 @@ the primary diagnosis code as `dp`. Writes parquet (`note_id`, `note_text`, `dp`
 > Never commit a token to the repo.
 
 ### `preprocess_synonyms.ipynb`
-Builds the synthetic dataset: takes the valid `dp` codes from the referential, loads the
-synonym/augmentation pickle (`data/synonyms.pkl`), keeps only rows whose code is a valid `dp`,
-and writes parquet (`note_id`, `note_text`, `dp`). This feeds the down-weighted
-`doc_classifier_syn` head.
+Builds the synthetic datasets from the synonym/augmentation pickle (`data/synonyms.pkl`). Writes
+**two** parquets, each supervising a single head of the down-weighted `doc_classifier_syn`
+component:
+
+- `syn` (`note_id`, `note_text`, `dp`) — one synonym per document, kept only if its code is a
+  valid `dp`; trains the single-label `dp` head.
+- `syn_das` (`note_id`, `note_text`, `das`) — `k` synonyms (uniform in `1..8`, valid `das`
+  codes) concatenated per document, labelled with their code list; trains the multi-label `das`
+  head to flag several diagnoses at once. Codes are sampled uniformly, no co-occurrence realism.
+
+The two streams are kept separate so no document carries both `dp` and `das` gold (which would
+make the text ambiguous) and so each training batch supervises a fixed set of heads.
 
 ### `build_dataset.ipynb`
 Derives the per-head label artifacts from the **datasets** (whereas `valid_labels.ipynb` derives

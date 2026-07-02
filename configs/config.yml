@@ -1,9 +1,11 @@
 vars:
   train_path: "/data/scratch/ldedieu/CU2/encoder_baseline/MISTRAL/v1_das_mdp" #"/data/scratch/ldedieu/CU2/encoder_baseline/train/mistral"
   synth_path: "/data/scratch/ldedieu/CU2/encoder_baseline/train/syn"
+  synth_das_path: "/data/scratch/ldedieu/CU2/encoder_baseline/train/syn_das"
   val_path: "/data/scratch/ldedieu/CU2/encoder_baseline/MISTRAL/test_v1_das" ##"/data/scratch/ldedieu/CU2/encoder_baseline/PARHAF"
   label_attr: ["dp", "das", "mdp"]
   syn_label_attr: ["dp"]
+  syn_das_label_attr: ["das"]
   max_step: 3000
   validation_interval: 1000
 
@@ -108,7 +110,17 @@ syn_data:
   shuffle: dataset
   batch_size: "128 docs"
   pipe_names: "doc_classifier_syn"
-  
+
+syn_das_data:
+  data:
+    '@readers': parquet
+    path: ${vars.synth_das_path}
+    converter: omop
+    doc_attributes: ${vars.syn_das_label_attr}
+  shuffle: dataset
+  batch_size: "128 docs"
+  pipe_names: "doc_classifier_syn"
+
 val_data:
   '@readers': parquet
   path: ${vars.val_path}
@@ -149,6 +161,7 @@ train:
   train_data:
     - ${ train_data }
     - ${ syn_data }
+    - ${ syn_das_data }
   val_data: ${val_data}
   scorer: ${scorer}
   optimizer: ${optimizer}

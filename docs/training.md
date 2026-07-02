@@ -81,22 +81,32 @@ works (e.g. `pandas.DataFrame.to_parquet`); Spark is not required.
   (single head, public transformer).
 - If you also have `das` / `mdp`, start from [`configs/config.yml`](../configs/config.yml).
 
-**3. Decide what to do about the synthetic (`dp`) head.** Both configs add a second
-`doc_classifier_syn` component fed from `vars.synth_path`, and `train.train_data` is
-`[train_data, syn_data]`. This is a down-weighted `dp`-only augmentation. You have three options:
+**3. Decide what to do about the synthetic heads.** Both configs add a second
+`doc_classifier_syn` component (shared weights, down-weighted via `loss_scales`) fed from one or
+more synonym streams. The multi-head `config.yml` uses **two** synthetic streams and
+`train.train_data` is `[train_data, syn_data, syn_das_data]`:
 
-- **Reuse the shipped synonyms** (simplest, and `dp`-only so it fits any `dp` head): the source
-  `data/synonyms.pkl` is in this repo and built from public referentials.
-  `scripts.preprocess_synonyms` writes it to a `synth_path` parquet — point `vars.synth_path`
-  there and you're done.
-- **Bring your own synonym set.** The synthetic parquet is just the OMOP schema restricted to
-  `dp`: two columns, `note_text` (the synonym / augmented text) and `dp` (its single ICD-10
-  code). `vars.syn_label_attr` stays `["dp"]`. Any parquet with those columns works.
-- **Train without it.** If you don't provide a `synth_path`, training **will fail** (the reader
-  can't open an empty path), so you must actively remove the component:
-  - delete the `syn_data:` block,
-  - set `train.train_data` to just `[${ train_data }]`,
-  - delete the `doc_classifier_syn` component and its `loss_scales` entry.
+- `syn_data` (`vars.synth_path`, `syn_label_attr: ["dp"]`) — one synonym per document → `dp`.
+- `syn_das_data` (`vars.synth_das_path`, `syn_das_label_attr: ["das"]`) — several synonyms
+  concatenated per document → the `das` code list, teaching the multi-label head to flag several
+  diagnoses. Kept as a separate stream so no document mixes `dp` and `das` gold and each batch
+  supervises a fixed head set.
+
+Options:
+
+- **Reuse the shipped synonyms** (simplest): the source `data/synonyms.pkl` is in this repo and
+  built from public referentials. `scripts.preprocess_synonyms` writes **both** parquets — point
+  `vars.synth_path` / `vars.synth_das_path` at them and you're done. For a `dp`-only config
+  (`config_dp.yml`), keep only `syn_data`.
+- **Bring your own synonym set.** Each synthetic parquet is the OMOP schema restricted to one
+  head: `syn` has `note_text` + `dp` (single code), `syn_das` has `note_text` + `das` (list of
+  codes). Any parquet with those columns works.
+- **Train without it.** If you don't provide a synthetic path, training **will fail** (the reader
+  can't open an empty path), so you must actively remove the stream(s):
+  - delete the `syn_data:` / `syn_das_data:` block(s),
+  - drop them from `train.train_data`,
+  - if you remove **all** synthetic streams, also delete the `doc_classifier_syn` component and
+    its `loss_scales` entry.
 
 **4. Regenerate the label spaces for your codes.** Each head loads its label space from a
 `.pkl` (the `labels:` key). Two options:
@@ -130,9 +140,10 @@ Shared values referenced elsewhere with `${vars.…}`:
 
 | Key                   | Meaning                                                   |
 |-----------------------|----------------------------------------------------------|
-| `train_path`/`synth_path`/`val_path` | Parquet dataset paths                     |
+| `train_path`/`synth_path`/`synth_das_path`/`val_path` | Parquet dataset paths     |
 | `label_attr`          | `["dp", "das", "mdp"]` — heads trained on the real data   |
-| `syn_label_attr`      | `["dp"]` — head trained on synthetic data                |
+| `syn_label_attr`      | `["dp"]` — head trained on the `syn_data` stream          |
+| `syn_das_label_attr`  | `["das"]` — head trained on the `syn_das_data` stream     |
 | `max_step`            | Total optimizer steps (`3000`)                           |
 | `validation_interval` | Validate every N steps (`1000`)                          |
 
@@ -163,15 +174,17 @@ linear warmup schedule:
 This trains the pretrained transformer gently while letting the freshly-initialised heads learn
 faster.
 
-### `train_data` / `syn_data` / `val_data`
+### `train_data` / `syn_data` / `syn_das_data` / `val_data`
 Each reads parquet with `converter: omop` and the relevant `doc_attributes`. `train_data` is
-routed to the `doc_classifier` pipe, `syn_data` to `doc_classifier_syn` (`pipe_names`). The two
-training sources are combined in `train.train_data: [train_data, syn_data]`.
+routed to the `doc_classifier` pipe; `syn_data` (`dp`) and `syn_das_data` (`das`) both go to
+`doc_classifier_syn` (`pipe_names`). The three training sources are combined in
+`train.train_data: [train_data, syn_data, syn_das_data]`.
 
 ### `train`
-The training loop: combines the two data streams, weights their losses with `loss_scales`
-(`doc_classifier: 1.0`, `doc_classifier_syn: 0.1` — synthetic data contributes less),
-`grad_max_norm: 1.0`, `mixed_precision: bf16`, `num_workers: 16`, `cpu: False`.
+The training loop: combines the data streams, weights their losses with `loss_scales`
+(`doc_classifier: 1.0`, `doc_classifier_syn: 0.1` — synthetic data contributes less; both
+synthetic streams share the `doc_classifier_syn` scale), `grad_max_norm: 1.0`,
+`mixed_precision: bf16`, `num_workers: 16`, `cpu: False`.
 
 ### `logger`
 `json` (file) + `rich` (console). The `rich` logger surfaces the loss and the per-head
