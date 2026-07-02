@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1300 340" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#94a3b8"/>
+    </marker>
+  </defs>
+
+  <!-- edges -->
+  <g fill="none" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrow)">
+    <path d="M144,180 L188,180"/>
+    <path d="M328,180 L352,180"/>
+    <path d="M496,180 L520,180"/>
+    <path d="M724,180 L780,180"/>
+    <path d="M940,180 C964,180 958,98 976,98"/>
+    <path d="M940,180 L976,180"/>
+    <path d="M940,180 C964,180 958,262 976,262"/>
+    <path d="M1152,98 L1186,98"/>
+    <path d="M1152,180 L1186,180"/>
+    <path d="M1152,262 L1186,262"/>
+  </g>
+
+  <!-- grouping box: eds.transformer + eds.doc_pooler -->
+  <rect x="168" y="112" width="580" height="136" rx="10" fill="none" stroke="#94a3b8" stroke-width="1" stroke-dasharray="5 4"/>
+  <text x="458" y="130" text-anchor="middle" font-size="12" fill="#64748b">eds.transformer + eds.doc_pooler</text>
+
+  <!-- data node: Document tokens -->
+  <rect x="12" y="158" width="132" height="44" rx="22" fill="#64748b" stroke="#475569"/>
+  <text x="78" y="180" text-anchor="middle" dominant-baseline="central" font-size="13" fill="#f8fafc">Document tokens</text>
+
+  <!-- proc: Encoder -->
+  <rect x="192" y="150" width="136" height="60" rx="9" fill="#1e293b" stroke="#334155"/>
+  <text x="260" y="180" text-anchor="middle" font-size="13" fill="#f8fafc">
+    <tspan x="260" dy="-4" font-weight="700">Encoder</tspan>
+    <tspan x="260" dy="17" font-size="10.5" fill="#cbd5e1">eds.transformer</tspan>
+  </text>
+
+  <!-- data: Token embeddings -->
+  <rect x="356" y="158" width="140" height="44" rx="22" fill="#64748b" stroke="#475569"/>
+  <text x="426" y="180" text-anchor="middle" dominant-baseline="central" font-size="13" fill="#f8fafc">Token embeddings</text>
+
+  <!-- proc: Pooler -->
+  <rect x="524" y="150" width="200" height="60" rx="9" fill="#1e293b" stroke="#334155"/>
+  <text x="624" y="180" text-anchor="middle" font-size="13" fill="#f8fafc">
+    <tspan x="624" dy="-4" font-weight="700">Pooler</tspan>
+    <tspan x="624" dy="17" font-size="10.5" fill="#cbd5e1">eds.doc_pooler · attention</tspan>
+  </text>
+
+  <!-- data: Document embedding -->
+  <rect x="780" y="158" width="160" height="44" rx="22" fill="#64748b" stroke="#475569"/>
+  <text x="860" y="180" text-anchor="middle" dominant-baseline="central" font-size="13" fill="#f8fafc">Document embedding</text>
+
+  <!-- head: dp -->
+  <rect x="976" y="70" width="176" height="56" rx="9" fill="#2563eb" stroke="#1d4ed8"/>
+  <text x="1064" y="98" text-anchor="middle" font-size="13" fill="#ffffff">
+    <tspan x="1064" dy="-4" font-weight="700">dp — 13 358 classes</tspan>
+    <tspan x="1064" dy="17" font-size="10.5" fill="#dbeafe">single-label · CE</tspan>
+  </text>
+
+  <!-- head: das -->
+  <rect x="976" y="152" width="176" height="56" rx="9" fill="#7c3aed" stroke="#6d28d9"/>
+  <text x="1064" y="180" text-anchor="middle" font-size="13" fill="#ffffff">
+    <tspan x="1064" dy="-4" font-weight="700">das — 40 333 classes</tspan>
+    <tspan x="1064" dy="17" font-size="10.5" fill="#ede9fe">multi-label · BCE</tspan>
+  </text>
+
+  <!-- head: mdp -->
+  <rect x="976" y="234" width="176" height="56" rx="9" fill="#0891b2" stroke="#0e7490"/>
+  <text x="1064" y="262" text-anchor="middle" font-size="13" fill="#ffffff">
+    <tspan x="1064" dy="-4" font-weight="700">mdp — 719 classes</tspan>
+    <tspan x="1064" dy="17" font-size="10.5" fill="#cffafe">single-label · CE</tspan>
+  </text>
+
+  <!-- outputs -->
+  <rect x="1186" y="78" width="86" height="40" rx="20" fill="#64748b" stroke="#475569"/>
+  <text x="1229" y="98" text-anchor="middle" dominant-baseline="central" font-size="13" fill="#f8fafc">1 dp</text>
+
+  <rect x="1186" y="160" width="96" height="40" rx="20" fill="#64748b" stroke="#475569"/>
+  <text x="1234" y="180" text-anchor="middle" dominant-baseline="central" font-size="13" fill="#f8fafc">0–N das</text>
+
+  <rect x="1186" y="242" width="90" height="40" rx="20" fill="#64748b" stroke="#475569"/>
+  <text x="1231" y="262" text-anchor="middle" dominant-baseline="central" font-size="13" fill="#f8fafc">1 mdp</text>
+</svg>
