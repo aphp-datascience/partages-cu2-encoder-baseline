@@ -6,25 +6,69 @@ readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "edsnlp",
-    "torch==2.4.1+cu121",
 ]
+
+# torch is portable across machines via *conflicting extras*: pick exactly one at sync
+# time to match the local hardware. The lockfile carries every variant, so `uv lock`
+# runs anywhere (GPU or not) and each machine resolves deterministically — no +cuXXX
+# hard-pin that breaks partners on a different CUDA.
+#
+#   uv sync --extra cpu      # no GPU (e.g. local/WSL dev, CI)
+#   uv sync --extra cu118    # CUDA 11.8
+#   uv sync --extra cu121    # CUDA 12.1 (the AP-HP training cluster)
+#   uv sync --extra cu124    # CUDA 12.4
+#
+# A GPU wheel runs on any driver >= its CUDA version, so pick the highest cuXXX <= your
+# CUDA. Check yours with `nvidia-smi` (top-right "CUDA Version"); no NVIDIA GPU -> cpu.
+# For another CUDA build, add an index + extra below (see https://pytorch.org/get-started/).
+# NB: a bare `uv sync` (no --extra) installs NO torch — one extra is required.
+[project.optional-dependencies]
+cpu = ["torch==2.4.1"]
+cu118 = ["torch==2.4.1"]
+cu121 = ["torch==2.4.1"]
+cu124 = ["torch==2.4.1"]
 
 # edsnlp is pinned to the `classif_head` fork: the eds.doc_classifier / eds.doc_pooler
 # components and the eds.doc_classif metric only exist on that branch.
 [tool.uv.sources]
 edsnlp = { git = "https://github.com/aphp/edsnlp.git", rev = "classif_head" }
-torch = { index = "pytorch" }
+torch = [
+    { index = "pytorch-cpu", extra = "cpu" },
+    { index = "pytorch-cu118", extra = "cu118" },
+    { index = "pytorch-cu121", extra = "cu121" },
+    { index = "pytorch-cu124", extra = "cu124" },
+]
 
-# The default index is the public PyPI. torch is pulled from the PyTorch CUDA 12.1 wheel
-# index below. For another CUDA version, change the +cuXXX pin on torch and this URL
-# (see https://pytorch.org/get-started/locally/).
+# The extras are mutually exclusive: exactly one torch backend per environment.
+[tool.uv]
+conflicts = [
+    [{ extra = "cpu" }, { extra = "cu118" }, { extra = "cu121" }, { extra = "cu124" }],
+]
+
+# The default index stays the public PyPI. torch wheels come from the PyTorch index
+# matching the chosen extra.
 #
 # Note: the preprocessing notebooks run on the AP-HP Spark/YARN cluster and need PySpark
 # plus the AP-HP-internal `edstoolbox`. These are NOT project dependencies (they are not
 # on public PyPI); AP-HP users install them separately — see docs/preprocessing.md.
 [[tool.uv.index]]
-name = "pytorch"
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-cu118"
+url = "https://download.pytorch.org/whl/cu118"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-cu121"
 url = "https://download.pytorch.org/whl/cu121"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-cu124"
+url = "https://download.pytorch.org/whl/cu124"
 explicit = true
 
 [tool.ruff]

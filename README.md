@@ -57,18 +57,33 @@ synonym data, down-weighted). The synthetic head is excluded at inference.
 Dependencies are managed with [uv](https://docs.astral.sh/uv/) (Python 3.12, see
 `.python-version`).
 
+You **must** pick a torch backend that matches your hardware via a uv *extra* — a bare
+`uv sync` installs no torch:
+
 ```bash
-uv sync          # create the venv and install all dependencies from the lockfile
-uv run <cmd>     # run anything inside the project venv
+uv sync --extra cpu      # no GPU (local / WSL dev, CI)
+uv sync --extra cu118    # CUDA 11.8
+uv sync --extra cu121    # CUDA 12.1 (the AP-HP training cluster)
+uv sync --extra cu124    # CUDA 12.4
+uv run <cmd>             # run anything inside the project venv
 ```
+
+**Which one do I pick?** If your machine has **no NVIDIA GPU**, use `cpu`. Otherwise run
+`nvidia-smi` and read the **"CUDA Version"** shown top-right: choose the **highest `cuXXX` that
+is not above** it (a GPU build also runs on any newer CUDA driver). Examples: CUDA 12.1 or
+12.2 → `cu121`; CUDA 12.4 or newer (incl. 13.x) → `cu124`; CUDA 11.8 to 12.0 → `cu118`. When
+unsure, `cu121` is a safe default on most recent GPUs.
 
 Notes:
 
 - **`edsnlp` is pinned to a git branch** (`classif_head`): the `eds.doc_classifier`,
   `eds.doc_pooler` components and the `eds.doc_classif` metric only exist on that fork.
-- **`torch==2.4.1+cu121`** is pulled from the PyTorch CUDA 12.1 wheel index. For another CUDA
-  version, edit the `torch` pin and the `pytorch` index URL in `pyproject.toml`
-  (see <https://pytorch.org/get-started/locally/>).
+- **torch is portable via conflicting extras** (`cpu` / `cu118` / `cu121` / `cu124`).
+  For a CUDA build not listed, add an index + extra in `pyproject.toml` following the
+  existing pattern (see <https://pytorch.org/get-started/locally/>). If `uv sync` fails on
+  torch, you almost certainly forgot the `--extra`, or need a backend not yet declared — **do
+  not** rebuild the environment by hand (that silently pulls an ancient, incompatible
+  `transformers`).
 - The transformer `PARTAGES-camembert-large` referenced in the config may be access-restricted
   on the Hugging Face Hub. Swap it for the public `almanach/camembertv2-base` if you don't have
   access (see [docs/training.md](docs/training.md)).
@@ -88,8 +103,8 @@ Full schema and label details are in [docs/data.md](docs/data.md).
 ## Quickstart
 
 ```bash
-# 1. Install
-uv sync
+# 1. Install (pick the torch extra for your hardware: cpu / cu121 / cu124)
+uv sync --extra cu121
 
 # 2. Get the data: download MISTRAL from the PARTAGES Drive, or bring your own parquet
 #    (docs/training.md#using-your-own-data). Schema: docs/data.md
