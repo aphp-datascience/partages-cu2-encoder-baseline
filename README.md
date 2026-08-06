@@ -121,7 +121,6 @@ uv run python -m edsnlp.train --config configs/config.yml --seed 42
 
 ```
 configs/config.yml     # the single source of truth: pipeline + optimizer + data + training
-configs/config_dp*.yml # single-head baseline, plus the CU2 experiment arms (templates)
 data/                  # CIM-10 referential + label artifacts (.pkl) consumed by the config
 scripts/               # data-preparation scripts (AP-HP Spark) + evaluation scripts
 notebooks/             # original data-preparation notebooks + inference reference

@@ -13,9 +13,6 @@ training CLI. There is no training script in this repo.
 The two are structurally identical apart from the number of classification heads, so everything
 below applies to both — just point `--config` at the one you want.
 
-The repository also ships five **CU2 experiment configs** (`config_dp_*.yml`). Those are
-templates, not runnable as-is — see [CU2 experiment configs](#cu2-experiment-configs) below.
-
 ## Launching a run
 
 The default multi-head config:
@@ -229,29 +226,6 @@ uv run python -m edsnlp.tune --config configs/config_dp.yml
 adapt the hyper-parameter paths to the multi-head structure
 (e.g. `nlp.components.doc_classifier.heads.dp.hidden_size`). See the
 [EDS-NLP training documentation](https://aphp.github.io/edsnlp/) for the schema.
-
-## CU2 experiment configs
-
-The `config_dp_*.yml` files are the arms of the CU2 study. They are **templates**: they contain
-`@PLACEHOLDER@` tokens that a job launcher substitutes before submission, so running one
-directly will fail on an unsubstituted value. Treat them as a record of how each arm was
-configured, and as a starting point to adapt — not as ready-made entry points.
-
-| Config                    | Arm                                              | Placeholders (beyond `@DATA@ @BACKBONE@ @OUTPUT@ @MAXSTEP@`) |
-|---------------------------|--------------------------------------------------|--------------------------------------------------------------|
-| `config_dp_raw.yml`       | Control: real corpus only, no synthetic data     | —                                                            |
-| `config_dp_tune.yml`      | Control + Optuna search (`edsnlp.tune`)          | `@NTRIALS@`                                                  |
-| `config_dp_hp.yml`        | Control with hyper-parameters exposed, for an externally driven sweep | `@HIDDEN@ @DROPOUT@ @WARMUP@ @BERT_LR@ @HEAD_LR@ @HEAD_WD@` |
-| `config_dp_syn.yml`       | Control + synonym referential, loss scale fixed at `0.1` | `@SYN@`                                              |
-| `config_dp_noise_syn.yml` | `clean` arm + synonym referential, loss scale swept | `@SYN@ @LOSSSCALE@`                                       |
-
-Two properties are deliberate across all five and worth preserving if you adapt them:
-
-- **Validation is always on the held-out DEV split, never on PARHAF.** PARHAF is scored once,
-  at the end, and never takes part in model selection or in the hyper-parameter search.
-- **The auxiliary `doc_classifier_syn` head shares the weights of `doc_classifier`.** It adds no
-  parameters, so a difference between an arm with and without the referential is attributable to
-  the data, not to extra capacity.
 
 ## Evaluating a trained model
 
