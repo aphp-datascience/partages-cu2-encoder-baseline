@@ -1,13 +1,15 @@
-# Condition RAW du papier : DP seul, train v3 non pondéré, backbone PARTAGES.
+# RAW condition + SYNONYM REFERENTIAL: the config_dp_raw.yml arm, plus an auxiliary
+# `doc_classifier_syn` head fed by the synonym referential at a FIXED loss scale of 0.1.
+# Use config_dp_noise_syn.yml to sweep that scale instead.
 #
-# Dérivée de config_dp.yml, avec trois écarts assumés :
-#   - PAS de données synthétiques (doc_classifier_syn / syn_data retirés) : le raw est le
-#     contrôle, il n'apprend que sur MISTRAL v3 ;
-#   - validation sur le DEV v3, jamais sur PARHAF -> pas de fuite de test (PARHAF n'est
-#     évalué qu'une fois, à la fin, hors sélection de modèle) ;
-#   - backbone PARTAGES (adapté au domaine), comme le modèle de synonyme.
+#   - `doc_classifier_syn` SHARES the weights of `doc_classifier`, so it adds no parameters:
+#     what is being tested is the DATA, not extra capacity;
+#   - the training corpus, the DEV split and model selection are those of the control arm, so
+#     the pairing with existing control runs is exact;
+#   - validation on DEV, never on PARHAF.
 #
-# Placeholders substitués par jz/slurm/encoder_raw.slurm : @DATA@ @BACKBONE@ @OUTPUT@ @MAXSTEP@.
+# TEMPLATE, not directly runnable: @DATA@ @BACKBONE@ @OUTPUT@ @MAXSTEP@ @SYN@ are substituted
+# by the job launcher. See docs/training.md, "CU2 experiment configs".
 
 vars:
   train_path: "@DATA@/train"

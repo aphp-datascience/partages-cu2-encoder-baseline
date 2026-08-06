@@ -1,13 +1,15 @@
-# Condition RAW du papier : DP seul, train v3 non pondéré, backbone PARTAGES.
+# RAW condition: `dp` only, unweighted training set, domain-adapted backbone.
 #
-# Dérivée de config_dp.yml, avec trois écarts assumés :
-#   - PAS de données synthétiques (doc_classifier_syn / syn_data retirés) : le raw est le
-#     contrôle, il n'apprend que sur MISTRAL v3 ;
-#   - validation sur le DEV v3, jamais sur PARHAF -> pas de fuite de test (PARHAF n'est
-#     évalué qu'une fois, à la fin, hors sélection de modèle) ;
-#   - backbone PARTAGES (adapté au domaine), comme le modèle de synonyme.
+# This is the control arm of the CU2 experiments. Derived from config_dp.yml, with three
+# deliberate departures:
+#   - NO synthetic data (doc_classifier_syn / syn_data removed): the control must learn from
+#     the real corpus alone;
+#   - validation on the held-out DEV split, never on PARHAF -> no test leakage (PARHAF is
+#     scored once, at the very end, and never takes part in model selection);
+#   - domain-adapted PARTAGES backbone, matching the synonym model.
 #
-# Placeholders substitués par jz/slurm/encoder_raw.slurm : @DATA@ @BACKBONE@ @OUTPUT@ @MAXSTEP@.
+# TEMPLATE, not directly runnable: @DATA@ @BACKBONE@ @OUTPUT@ @MAXSTEP@ are substituted by the
+# job launcher. See docs/training.md, "CU2 experiment configs".
 
 vars:
   train_path: "@DATA@/train"

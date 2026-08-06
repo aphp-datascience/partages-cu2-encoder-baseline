@@ -1,20 +1,22 @@
-# Condition `clean` + RÉFÉRENTIEL : identique au `clean` de l'expérience de bruit, plus un head
-# auxiliaire `doc_classifier_syn` alimenté par le référentiel de synonymes.
+# `clean` condition + SYNONYM REFERENTIAL, with the auxiliary loss scale SWEPT: the `clean`
+# arm of the noise experiment, plus a `doc_classifier_syn` head fed by the synonym referential.
 #
-# La question : le référentiel FIABILISÉ par le contrastif est-il utile en aval, alors que le
-# référentiel BRUT nuisait (0,441 contre 0,458 le 2026-07-25, 1 seed) ?
+# The question it answers: is a referential that has been filtered by the qualification model
+# useful downstream, given that an unfiltered referential was not?
 #
-#   - le corpus d'entraînement, le DEV et la sélection de modèle sont ceux de `clean` : la seule
-#     chose qui change est le head auxiliaire, donc l'appariement avec les runs `clean` existants
-#     (seeds 42-44) est exact ;
-#   - `doc_classifier_syn` PARTAGE les poids de `doc_classifier` (`${ nlp.components.doc_classifier }`),
-#     il n'ajoute aucun paramètre : c'est bien la DONNÉE qu'on teste, pas de la capacité en plus ;
-#   - validation sur le DEV, jamais PARHAF.
+#   - the training corpus, the DEV split and model selection are those of `clean`: the only
+#     thing that changes is the auxiliary head, so the pairing with existing `clean` runs is
+#     exact, seed by seed;
+#   - `doc_classifier_syn` SHARES the weights of `doc_classifier`
+#     (`${ nlp.components.doc_classifier }`) and adds no parameters: what is being tested is
+#     the DATA, not extra capacity;
+#   - validation on DEV, never on PARHAF.
 #
-# ⚠️ `@LOSSSCALE@` est balayé. Ne JAMAIS retenir la valeur qui maximise PARHAF : ce serait régler
-#    sur le test. La grille se rapporte en entier, et la conclusion doit tenir à toutes les valeurs.
+# /!\ `@LOSSSCALE@` is swept. NEVER keep the value that maximises PARHAF — that would be tuning
+#     on the test set. Report the whole grid; a conclusion must hold across all of it.
 #
-# Placeholders : @DATA@ @BACKBONE@ @OUTPUT@ @MAXSTEP@ @SYN@ @LOSSSCALE@.
+# TEMPLATE, not directly runnable: @DATA@ @BACKBONE@ @OUTPUT@ @MAXSTEP@ @SYN@ @LOSSSCALE@ are
+# substituted by the job launcher. See docs/training.md, "CU2 experiment configs".
 
 vars:
   train_path: "@DATA@/train"

@@ -1,15 +1,18 @@
-"""Comme `eval_dataset.py`, mais écrit AUSSI la prédiction par document.
+"""Like `eval_dataset.py`, but ALSO writes out the per-document prediction.
 
-Sert à comparer l'encodeur à une autre source de prédiction (LLM few-shot, LLM
-affiné) **patient par patient**, ce que les métriques agrégées ne permettent
-pas : deux systèmes à 30 % peuvent se tromper sur les mêmes patients ou sur des
-patients disjoints, et la conclusion n'est pas la même.
+Used to compare the encoder against another source of predictions (a few-shot
+LLM, a fine-tuned LLM) **document by document**, which aggregate metrics cannot
+do: two systems scoring 30% may be wrong on the same documents or on disjoint
+ones, and the conclusion is not the same.
 
-Fichier séparé de `eval_dataset.py` à dessein : celui-ci tourne à la fin de
-chaque entraînement, on n'y touche pas pendant qu'une grille est en vol.
+Kept separate from `eval_dataset.py` on purpose: that one runs at the end of
+every training job and must not change while a grid is in flight.
 
-    python scripts/eval_dump.py --model .../model-last --data .../parhaf_patient \
-        --vocab .../valid_labels_dp.pkl --out enc_preds.pkl
+    uv run python scripts/eval_dump.py \
+        --model path/to/artifacts/model-last \
+        --data  path/to/parhaf_patient \
+        --vocab path/to/valid_labels_dp.pkl \
+        --out   enc_preds.pkl
 """
 
 import argparse
@@ -63,15 +66,16 @@ def main() -> None:
     n_all = len(df)
     seen = df[df["dp_gold"].isin(vocab)]
     print(
-        f"\ndocuments: {n_all} | DP hors vocab (comptés erreurs): {n_all - len(seen)}"
+        f"\ndocuments: {n_all} | out-of-vocabulary codes (counted as errors): "
+        f"{n_all - len(seen)}"
     )
-    print("\n=== tous les documents (DP inconnu = erreur) ===")
+    print("\n=== all documents (out-of-vocabulary code = error) ===")
     prf(df["dp_gold"], df["dp"], "all")
-    print("\n=== documents à DP connu du vocab ===")
+    print("\n=== documents whose code is in the label space ===")
     prf(seen["dp_gold"], seen["dp"], "seen")
 
     df[["note_id", "dp_gold", "dp"]].to_pickle(args.out)
-    print(f"\n-> {args.out}  ({len(df)} lignes)")
+    print(f"\n-> {args.out}  ({len(df)} rows)")
 
 
 if __name__ == "__main__":

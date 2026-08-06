@@ -1,14 +1,15 @@
-"""Évalue un modèle doc_classifier entraîné sur un jeu parquet (ex : PARHAF).
+"""Score a trained doc_classifier model on a parquet dataset (e.g. PARHAF).
 
-Charge `model-last`, mappe la pipeline sur le jeu, compare `dp` prédit au `dp` de référence.
-Rapporte micro/macro F1 au code complet ET à la catégorie (3 caractères), et surtout les
-**deux dénominateurs** : sur tous les documents (les DP absents du vocab d'entraînement
-comptent comme erreurs) et sur le seul sous-ensemble à DP connu — la décision assumée.
+Loads `model-last`, maps the pipeline over the dataset, and compares the predicted `dp`
+against the reference `dp`. Reports micro/macro F1 both at the full code and at the
+3-character category level, and — importantly — under **two denominators**: over all
+documents (codes absent from the training label space count as errors) and over the
+subset whose code is in it. Neither is "the" number; say which one you are quoting.
 
-    python scripts/eval_dataset.py \
-        --model $CU2_RUNS/encoder/raw/artifacts/model-last \
-        --data  $CU2_DATA/encoder_v3/parhaf \
-        --vocab $CU2_DATA/encoder_v3/valid_labels_dp.pkl
+    uv run python scripts/eval_dataset.py \
+        --model path/to/artifacts/model-last \
+        --data  path/to/parhaf \
+        --vocab path/to/valid_labels_dp.pkl
 """
 
 import argparse
@@ -60,12 +61,12 @@ def main() -> None:
     n_unseen = n_all - len(seen)
 
     print(
-        f"\ndocuments: {n_all} | DP hors vocab (comptés erreurs): {n_unseen} "
-        f"({100 * n_unseen / n_all:.1f}%)"
+        f"\ndocuments: {n_all} | out-of-vocabulary codes (counted as errors): "
+        f"{n_unseen} ({100 * n_unseen / n_all:.1f}%)"
     )
-    print("\n=== tous les documents (DP inconnu = erreur) ===")
+    print("\n=== all documents (out-of-vocabulary code = error) ===")
     prf(df["dp_gold"], df["dp"].fillna("__NA__"), "all")
-    print("\n=== documents à DP connu du vocab ===")
+    print("\n=== documents whose code is in the label space ===")
     prf(seen["dp_gold"], seen["dp"].fillna("__NA__"), "seen")
 
 

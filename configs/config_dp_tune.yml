@@ -1,13 +1,12 @@
-# Condition RAW du papier : DP seul, train v3 non pondéré, backbone PARTAGES.
+# RAW condition + Optuna search: the config_dp_raw.yml arm, plus a `tuning:` block driving
+# EDS-NLP's `edsnlp.tune` CLI.
 #
-# Dérivée de config_dp.yml, avec trois écarts assumés :
-#   - PAS de données synthétiques (doc_classifier_syn / syn_data retirés) : le raw est le
-#     contrôle, il n'apprend que sur MISTRAL v3 ;
-#   - validation sur le DEV v3, jamais sur PARHAF -> pas de fuite de test (PARHAF n'est
-#     évalué qu'une fois, à la fin, hors sélection de modèle) ;
-#   - backbone PARTAGES (adapté au domaine), comme le modèle de synonyme.
+# Same guarantees as the control arm: no synthetic data, and validation on the held-out DEV
+# split — the search optimises `diag.dp.macro.f` on DEV, never on PARHAF. Tuning on the test
+# set would invalidate every number the arm produces.
 #
-# Placeholders substitués par jz/slurm/encoder_raw.slurm : @DATA@ @BACKBONE@ @OUTPUT@ @MAXSTEP@.
+# TEMPLATE, not directly runnable: @DATA@ @BACKBONE@ @OUTPUT@ @MAXSTEP@ @NTRIALS@ are
+# substituted by the job launcher. See docs/training.md, "CU2 experiment configs".
 
 vars:
   train_path: "@DATA@/train"

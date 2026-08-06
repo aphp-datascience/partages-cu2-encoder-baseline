@@ -1,13 +1,14 @@
-# Condition RAW du papier : DP seul, train v3 non pondéré, backbone PARTAGES.
+# RAW condition with the hyper-parameters EXPOSED as placeholders, for an externally driven
+# sweep (one job per point) rather than Optuna's in-process search — use config_dp_tune.yml
+# for the latter.
 #
-# Dérivée de config_dp.yml, avec trois écarts assumés :
-#   - PAS de données synthétiques (doc_classifier_syn / syn_data retirés) : le raw est le
-#     contrôle, il n'apprend que sur MISTRAL v3 ;
-#   - validation sur le DEV v3, jamais sur PARHAF -> pas de fuite de test (PARHAF n'est
-#     évalué qu'une fois, à la fin, hors sélection de modèle) ;
-#   - backbone PARTAGES (adapté au domaine), comme le modèle de synonyme.
+# Identical to config_dp_raw.yml except that hidden size, dropout, warmup, the two learning
+# rates and the head weight decay are substituted at launch time. Same guarantees: no
+# synthetic data, validation on the held-out DEV split, never on PARHAF.
 #
-# Placeholders substitués par jz/slurm/encoder_raw.slurm : @DATA@ @BACKBONE@ @OUTPUT@ @MAXSTEP@.
+# TEMPLATE, not directly runnable: @DATA@ @BACKBONE@ @OUTPUT@ @MAXSTEP@ @HIDDEN@ @DROPOUT@
+# @WARMUP@ @BERT_LR@ @HEAD_LR@ @HEAD_WD@ are substituted by the job launcher.
+# See docs/training.md, "CU2 experiment configs".
 
 vars:
   train_path: "@DATA@/train"
