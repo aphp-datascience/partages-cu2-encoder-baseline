@@ -127,7 +127,7 @@ tuning:
   checkpoint_dir: '@OUTPUT@/tuning_ckpt'
   n_trials: "@NTRIALS@"
   two_phase_tuning: false
-  metric: "doc_classifier.dp.macro.f"
+  metric: "diag.dp.macro.f"
   hyperparameters:
     "optimizer.groups.0.lr.max_value":
       alias: "bert_lr"
