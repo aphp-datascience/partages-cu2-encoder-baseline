@@ -543,7 +543,7 @@ provides-extras = ["cpu", "cu118", "cu121", "cu124"]
 [package.metadata.requires-dev]
 dev = [
     { name = "accelerate", specifier = ">=1.12.0" },
-    { name = "confit", specifier = ">=0.10.2" },
+    { name = "confit", specifier = ">=0.13.0.dev1" },
     { name = "datasets", specifier = ">=4.8.4" },
     { name = "foldedtensor", specifier = ">=0.4.0" },
     { name = "ipykernel", specifier = ">=7.2.0" },

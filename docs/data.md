@@ -99,7 +99,7 @@ weights. The label spaces are the union over datasets (`dp` = train ∪ syntheti
 | File                          | Content                                                       | Used by              |
 |-------------------------------|---------------------------------------------------------------|----------------------|
 | `valid_labels_{dp,das,mdp}.json` | Per-head label space restricted to observed codes           | `config_dp.yml` (`dp`) |
-| `label_freq_dict_{dp,das,mdp}.json` | `{code: document_count}` from train — class weights      | `config_dp.yml` (`dp`) |
+| `label_freq_dict_{dp,das,mdp}.json` | `{code: document_count}` from train — class weights      | optional `class_weights:` (unused by default) |
 
 To **change the target labels**, regenerate the relevant `.json` files and update the corresponding
 `labels:` (and `class_weights:`) paths under each head in `configs/config.yml` /

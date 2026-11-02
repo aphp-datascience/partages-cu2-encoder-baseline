@@ -27,7 +27,6 @@ nlp:
         dp:
           '@misc': eds.single_label_head
           labels: "/export/home/ldedieu/CU2/encoder-baseline/data/valid_labels_dp.json"
-          class_weights: "/export/home/ldedieu/CU2/encoder-baseline/data/label_freq_dict_dp.json"
           hidden_size: 1024
           activation_mode: "gelu"
           dropout_rate: 0.05

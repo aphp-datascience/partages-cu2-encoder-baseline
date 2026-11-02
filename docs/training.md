@@ -29,7 +29,7 @@ diagnosis (`dp`). Compared to the default multi-head config it:
 - has a single `dp` head (`eds.single_label_head`) instead of three;
 - sets `vars.label_attr` to `["dp"]`;
 - uses the public `almanach/camembertv2-base` transformer (no access restriction);
-- loads `dp` **class weights** from `data/label_freq_dict_dp.json` to counter class imbalance;
+- trains **unweighted** (no `class_weights:`, see the warning below);
 - includes an example `tuning` block for Optuna hyper-parameter search.
 
 ```bash
@@ -142,9 +142,8 @@ JSON file (the `labels:` key). Two options:
   superset of the codes present in your training parquet: a single-label head stops with an
   error on a training code that is not in its label space.
 
-  If you use `config_dp.yml`'s `class_weights:`, also regenerate
-  `data/label_freq_dict_dp.json` — a `{code: document_count}` JSON dict counted on your train set —
-  or remove the `class_weights:` key to train unweighted.
+  If you add `class_weights:` to a head, regenerate `data/label_freq_dict_dp.json` — a
+  `{code: document_count}` JSON dict counted on your train set.
 
 **5. Edit the paths and model** as in [*Before you run*](#before-you-run-things-to-edit):
 `vars.train_path`, `vars.val_path`, each head's `labels:`, and `train.output_dir`. Keep the
@@ -180,7 +179,12 @@ Shared values referenced elsewhere with `${vars.…}`:
   cross-entropy for `eds.single_label_head`, binary cross-entropy for `eds.multi_label_head`.
   The `das` head adds `threshold: 0.5` (a code is predicted when its probability passes it).
   Optional `class_weights:` (a `{code: document_count}` JSON dict) turns on inverse-frequency
-  weighting; a label missing from that dict gets weight 0.
+  weighting; a label missing from that dict gets weight 0. **Both shipped configs train
+  unweighted.** With a large label space holding many rare codes, inverse-frequency weights
+  can make the model collapse onto a single code: with ~3,600 `dp` codes, a weighted run
+  predicted one code for every document (dev micro-F1 0.1% after 1,000 steps), and so did
+  square-root weights (0.4%), while the same run without weights reached 78%. Start
+  unweighted; if you try weights, watch the first validation.
 - `doc_classifier_syn` is a confit reference (`${ nlp.components.doc_classifier }`) — it
   **shares weights** with `doc_classifier` but is fed the synthetic data.
 
