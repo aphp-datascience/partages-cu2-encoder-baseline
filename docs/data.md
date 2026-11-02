@@ -74,9 +74,11 @@ column:
 
 `mdp` valid codes are the `Z…` codes among the valid `dp` codes.
 
-## Label artifacts (`data/*.pkl`)
+## Label artifacts (`data/*.json`)
 
-The config loads the per-head label space from pickle files. There are two families, both
+The config loads the per-head label space from JSON files: a list of codes for `labels:`,
+a `{code: document_count}` dict for `class_weights:`. A `.txt` file with one code per line is
+also accepted for `labels:`. Pickles are **not** accepted by `eds.doc_classifier`. There are two families, both
 documented in [preprocessing.md](preprocessing.md):
 
 **Referential-driven** (`valid_labels_all_*`, from `valid_labels.ipynb` / `scripts.build_labels`)
@@ -85,21 +87,20 @@ documented in [preprocessing.md](preprocessing.md):
 
 | File                        | Content                                                  | Used by config head |
 |-----------------------------|----------------------------------------------------------|---------------------|
-| `valid_labels_all_dp.pkl`   | All valid `dp` codes (referential `MCO/HAD == 0`)        | `dp`                |
-| `valid_labels_all_das.pkl`  | All valid `das` codes (referential `MCO/HAD ∈ {0,1,2}`) | `das`               |
-| `valid_labels_all_mdp.pkl`  | All valid `mdp` codes (`Z…` codes among valid `dp`)     | `mdp`               |
+| `valid_labels_all_dp.json`  | All valid `dp` codes (referential `MCO/HAD == 0`)        | `dp`                |
+| `valid_labels_all_das.json` | All valid `das` codes (referential `MCO/HAD ∈ {0,1,2}`) | `das`               |
+| `valid_labels_all_mdp.json` | All valid `mdp` codes (`Z…` codes among valid `dp`)     | `mdp`               |
 
 **Dataset-driven** (from `build_dataset.ipynb`) — the codes actually seen in the data, plus class
 weights. The label spaces are the union over datasets (`dp` = train ∪ synthetic ∪ test; `das` /
 `mdp` = train ∪ test); the frequencies are counted on the **real train** set only. The single-head
-`configs/config_dp.yml` uses the `dp` pair:
+`configs/config_dp.yml` uses the `dp` pair (this repo ships the `dp` files only):
 
 | File                          | Content                                                       | Used by              |
 |-------------------------------|---------------------------------------------------------------|----------------------|
-| `valid_labels_{dp,das,mdp}.pkl` | Per-head label space restricted to observed codes           | `config_dp.yml` (`dp`) |
-| `label_freq_dict_{dp,das,mdp}.pkl` | `{code: document_count}` from train — class weights      | `config_dp.yml` (`dp`) |
-| `label2id.pkl` / `id2label.pkl` | `{head: {label ↔ id}}` mappings for all three heads        | (analysis / tooling) |
+| `valid_labels_{dp,das,mdp}.json` | Per-head label space restricted to observed codes           | `config_dp.yml` (`dp`) |
+| `label_freq_dict_{dp,das,mdp}.json` | `{code: document_count}` from train — class weights      | `config_dp.yml` (`dp`) |
 
-To **change the target labels**, regenerate the relevant `.pkl` files and update the corresponding
+To **change the target labels**, regenerate the relevant `.json` files and update the corresponding
 `labels:` (and `class_weights:`) paths under each head in `configs/config.yml` /
 `configs/config_dp.yml`.

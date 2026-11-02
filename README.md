@@ -77,7 +77,9 @@ unsure, `cu121` is a safe default on most recent GPUs.
 Notes:
 
 - **`edsnlp` is pinned to a git branch** (`classif_head`): the `eds.doc_classifier`,
-  `eds.doc_pooler` components and the `eds.doc_classif` metric only exist on that fork.
+  `eds.doc_pooler` components and the `eds.doc_classification` metric only exist on that fork.
+  Models trained with the fork before its Oct. 2026 revision (label files in `.pkl`, a
+  `multi_head_data.pkl` next to the weights) cannot be loaded by the current one: retrain them.
 - **torch is portable via conflicting extras** (`cpu` / `cu118` / `cu121` / `cu124`).
   For a CUDA build not listed, add an index + extra in `pyproject.toml` following the
   existing pattern (see <https://pytorch.org/get-started/locally/>). If `uv sync` fails on
@@ -121,7 +123,7 @@ uv run python -m edsnlp.train --config configs/config.yml --seed 42
 
 ```
 configs/config.yml     # the single source of truth: pipeline + optimizer + data + training
-data/                  # CIM-10 referential + label artifacts (.pkl) consumed by the config
+data/                  # CIM-10 referential + label artifacts (.json) consumed by the config
 scripts/               # data-preparation scripts (AP-HP Spark) + evaluation scripts
 notebooks/             # original data-preparation notebooks + inference reference
 docs/                  # this documentation

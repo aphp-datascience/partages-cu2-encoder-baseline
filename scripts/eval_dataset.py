@@ -9,14 +9,14 @@ subset whose code is in it. Neither is "the" number; say which one you are quoti
     uv run python scripts/eval_dataset.py \
         --model path/to/artifacts/model-last \
         --data  path/to/parhaf \
-        --vocab path/to/valid_labels_dp.pkl
+        --vocab path/to/valid_labels_dp.json
 """
 
 import argparse
-import pickle
 from pathlib import Path
 
 import edsnlp
+from _labels import load_labels
 from sklearn.metrics import precision_recall_fscore_support
 
 
@@ -41,7 +41,7 @@ def main() -> None:
     args = ap.parse_args()
 
     nlp = edsnlp.load(str(args.model), exclude=["doc_classifier_syn"])
-    vocab = set(pickle.loads(args.vocab.read_bytes()))
+    vocab = set(load_labels(args.vocab))
 
     data = (
         edsnlp.data.read_parquet(

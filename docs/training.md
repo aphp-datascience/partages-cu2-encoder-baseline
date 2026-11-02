@@ -29,7 +29,7 @@ diagnosis (`dp`). Compared to the default multi-head config it:
 - has a single `dp` head (`eds.single_label_head`) instead of three;
 - sets `vars.label_attr` to `["dp"]`;
 - uses the public `almanach/camembertv2-base` transformer (no access restriction);
-- loads `dp` **class weights** from `data/label_freq_dict_dp.pkl` to counter class imbalance;
+- loads `dp` **class weights** from `data/label_freq_dict_dp.json` to counter class imbalance;
 - includes an example `tuning` block for Optuna hyper-parameter search.
 
 ```bash
@@ -81,7 +81,7 @@ uv run accelerate launch \
 
 - `vars.train_path`, `vars.synth_path`, `vars.val_path` — your parquet datasets
   (see [data.md](data.md)).
-- The `labels:` path under each head (`/export/home/ldedieu/.../data/valid_labels_all_*.pkl`)
+- The `labels:` path under each head (`/export/home/ldedieu/.../data/valid_labels_all_*.json`)
   — point them at this repo's `data/` directory.
 - `nlp.components.doc_classifier.embedding.embedding.model` — the transformer. The config uses
   `PARTAGES-dev/PARTAGES-camembert-large`, which may be access-restricted on the Hugging Face
@@ -132,17 +132,18 @@ Options:
     its `loss_scales` entry.
 
 **4. Regenerate the label spaces for your codes.** Each head loads its label space from a
-`.pkl` (the `labels:` key). Two options:
+JSON file (the `labels:` key). Two options:
 
 - **Full CIM-10 referential** (recommended, matches the shipped setup): run
   `python -m scripts.build_labels` — pandas only, no Spark — to (re)produce
-  `data/valid_labels_all_{dp,das,mdp}.pkl`. This is independent of your data.
-- **Your own code set**: pickle a plain `list[str]` of the codes you want each head to predict
-  and point the head's `labels:` at it. Any code your data uses that is missing from this list
-  is unscoreable, so make sure it is a superset of the codes present in your parquet.
+  `data/valid_labels_all_{dp,das,mdp}.json`. This is independent of your data.
+- **Your own code set**: write a JSON list of the codes (or a `.txt` file, one code per
+  line) you want each head to predict and point the head's `labels:` at it. It must be a
+  superset of the codes present in your training parquet: a single-label head stops with an
+  error on a training code that is not in its label space.
 
   If you use `config_dp.yml`'s `class_weights:`, also regenerate
-  `data/label_freq_dict_dp.pkl` — a `{code: document_count}` dict counted on your train set —
+  `data/label_freq_dict_dp.json` — a `{code: document_count}` JSON dict counted on your train set —
   or remove the `class_weights:` key to train unweighted.
 
 **5. Edit the paths and model** as in [*Before you run*](#before-you-run-things-to-edit):
@@ -174,15 +175,17 @@ Shared values referenced elsewhere with `${vars.…}`:
 - `eds.transformer` — the backbone, sliding `window: 256` tokens.
 - `eds.doc_pooler` — `attention` pooling to one embedding per document.
 - `eds.doc_classifier` — holds the three heads. Each head sets its label space
-  (`labels:` → a `.pkl`), `loss` (`ce` for single-label, `bce` for multi-label), `hidden_size`
-  (`1024`), `activation_mode` (`gelu`), `dropout_rate`, `layer_norm`, and `loss_weight`. The
-  `das` head adds `selection: threshold` with `threshold: 0.5` (a code is predicted when its
-  probability passes the threshold).
+  (`labels:` → a JSON list), `hidden_size` (`1024`), `activation_mode` (`gelu`),
+  `dropout_rate`, `layer_norm`, and `loss_weight`. The loss follows from the head type:
+  cross-entropy for `eds.single_label_head`, binary cross-entropy for `eds.multi_label_head`.
+  The `das` head adds `threshold: 0.5` (a code is predicted when its probability passes it).
+  Optional `class_weights:` (a `{code: document_count}` JSON dict) turns on inverse-frequency
+  weighting; a label missing from that dict gets weight 0.
 - `doc_classifier_syn` is a confit reference (`${ nlp.components.doc_classifier }`) — it
   **shares weights** with `doc_classifier` but is fed the synthetic data.
 
 ### `scorer`
-`eds.doc_classif` computes per-head precision/recall/F over `label_attr`. `batch_size: 150 docs`,
+`eds.doc_classification` computes per-head precision/recall/F over `label_attr`. `batch_size: 150 docs`,
 `speed: true`.
 
 ### `optimizer`
@@ -236,7 +239,7 @@ outside it are handled explicitly rather than silently.
 uv run python scripts/eval_dataset.py \
     --model path/to/artifacts/model-last \
     --data  path/to/parhaf \
-    --vocab path/to/valid_labels_dp.pkl
+    --vocab path/to/valid_labels_dp.json
 ```
 
 `eval_dataset.py` reports micro/macro F1 at the full code and at the 3-character category level,

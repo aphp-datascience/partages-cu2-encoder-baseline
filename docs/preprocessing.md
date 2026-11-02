@@ -4,7 +4,7 @@ The notebooks in [`notebooks/`](../notebooks/) build the parquet datasets and la
 that the training config consumes. **They are AP-HP-specific**: they run on the AP-HP
 Spark / YARN / HDFS cluster and read internal data sources. External partners do not need to run
 them — instead, produce parquet files that follow the schema in [data.md](data.md) and the
-label `.pkl` artifacts described there.
+label `.json` artifacts described there.
 
 This page documents what each notebook does and the order to run them in.
 
@@ -46,7 +46,7 @@ Run them from the repo root as modules:
 
 | Command                                          | Mirrors notebook                | Output                                   |
 |--------------------------------------------------|---------------------------------|------------------------------------------|
-| `python -m scripts.build_labels`                 | `valid_labels.ipynb`            | `data/valid_labels_all_{dp,das,mdp}.pkl` |
+| `python -m scripts.build_labels`                 | `valid_labels.ipynb`            | `data/valid_labels_all_{dp,das,mdp}.json` |
 | `python -m scripts.preprocess_mistral --split train` | `prepocess_MISTRAL.ipynb`   | MISTRAL train parquet                    |
 | `python -m scripts.preprocess_mistral --split test`  | `prepocess_MISTRAL_test.ipynb` | MISTRAL test parquet                    |
 | `python -m scripts.preprocess_parhaf`            | `preprocess_PARHAF.ipynb`       | PARHAF parquet (`HF_TOKEN` required)     |
@@ -61,9 +61,9 @@ weights) has not been scripted — it stays a notebook.
 
 ### `valid_labels.ipynb`
 Builds the per-head label space from `data/Referentiel_CIM-10-20250108.csv`:
-- `valid_labels_all_dp.pkl` — codes with `code MCO/HAD == 0`
-- `valid_labels_all_das.pkl` — codes with `code MCO/HAD ∈ {0, 1, 2}`
-- `valid_labels_all_mdp.pkl` — the `Z…` codes among the valid `dp` codes
+- `valid_labels_all_dp.json` — codes with `code MCO/HAD == 0`
+- `valid_labels_all_das.json` — codes with `code MCO/HAD ∈ {0, 1, 2}`
+- `valid_labels_all_mdp.json` — the `Z…` codes among the valid `dp` codes
 
 ### `prepocess_MISTRAL.ipynb`
 Builds the real training set from the MISTRAL CSV:
@@ -116,6 +116,11 @@ them from the referential):
   counted on the **real train** set (MISTRAL) only; synthetic and validation data do not
   contribute.
 - The `label2id` / `id2label` mappings (`label2id.pkl`, `id2label.pkl`).
+
+> ⚠️ This notebook still writes **pickles**, and `eds.doc_classifier` reads label files as JSON
+> (or `.txt`, one code per line) only. Convert before pointing a config at them, e.g.
+> `python -c "import json, pandas as pd; json.dump(list(pd.read_pickle('valid_labels_dp.pkl')), open('valid_labels_dp.json', 'w'))"`
+> (for a frequency dict, dump `dict(...)` with `int` values).
 
 It also prints label-coverage diagnostics (which codes are unique to a single dataset). It writes
 no parquet — `prepocess_MISTRAL*` and `preprocess_synonyms` already materialise the datasets the

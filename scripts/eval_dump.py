@@ -11,15 +11,15 @@ every training job and must not change while a grid is in flight.
     uv run python scripts/eval_dump.py \
         --model path/to/artifacts/model-last \
         --data  path/to/parhaf_patient \
-        --vocab path/to/valid_labels_dp.pkl \
+        --vocab path/to/valid_labels_dp.json \
         --out   enc_preds.pkl
 """
 
 import argparse
-import pickle
 from pathlib import Path
 
 import edsnlp
+from _labels import load_labels
 from sklearn.metrics import precision_recall_fscore_support
 
 
@@ -47,7 +47,7 @@ def main() -> None:
     args = ap.parse_args()
 
     nlp = edsnlp.load(str(args.model), exclude=["doc_classifier_syn"])
-    vocab = set(pickle.loads(args.vocab.read_bytes()))
+    vocab = set(load_labels(args.vocab))
 
     data = (
         edsnlp.data.read_parquet(

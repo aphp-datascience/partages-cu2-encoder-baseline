@@ -72,5 +72,5 @@ def compute_metric(df, granularity=None):
 Slicing the code to its first 3 characters (`granularity=3`) scores at the ICD-10 **category**
 level instead of the full code, which is a more forgiving metric.
 
-> The metric above is `dp`-only for clarity. The training-time scorer (`eds.doc_classif` in the
+> The metric above is `dp`-only for clarity. The training-time scorer (`eds.doc_classification` in the
 > config) reports per-head micro-F1 for `dp`, `das` and `mdp` during validation.
