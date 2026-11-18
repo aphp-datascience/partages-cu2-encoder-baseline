@@ -161,10 +161,12 @@ No real patient data was used. One training run, all weights trained:
 Accuracy of `target` (DR if any, else DP) with the DR rule; none of these stays were used
 for training.
 
-| Test set | Stays | Exact | 3 characters |
-|---|---:|---:|---:|
-| PARHAF CU2 test set (fictitious patients, revised gold) | 288 | 63.9 % | 79.5 % |
-| MISTRAL test (synthetic stays) | 14 253 | 92.3 % | 94.3 % |
+| Test set | Stays | Exact | 3 characters | Top-10 | Top-20 |
+|---|---:|---:|---:|---:|---:|
+| PARHAF CU2 test set (fictitious patients, revised gold) | 288 | 63.9 % | 79.5 % | 89.6 % | 91.7 % |
+| MISTRAL test (synthetic stays) | 14 253 | 92.3 % | 94.3 % | 97.8 % | 97.9 % |
+
+Top-k: the predicted `target` first, then the `affection` head's most probable codes.
 
 Note styles and coding habits differ between hospitals: fine-tuning on your own coded
 stays is recommended.
