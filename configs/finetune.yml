@@ -3,7 +3,7 @@
 #   uv run python -m scripts.train --config configs/finetune.yml --seed 42
 #
 # base_model must be a local dir: download the released model first with
-#   uv run huggingface-cli download LucasDedieu/cu2-icd10-dp-encoder \
+#   uv run huggingface-cli download PARTAGES-CU2/cu2-icd10-dp-encoder --revision v0 \
 #       --local-dir models/cu2-icd10-dp-encoder
 #
 # Edit the `vars` below, or override any of them on the command line, e.g.

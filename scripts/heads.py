@@ -19,12 +19,14 @@ DEFAULT_MDP = "Z769"
 
 
 def resolve_model(model: str) -> str:
-    """Local dir as is; a Hub repo id is downloaded (or read from the HF cache)."""
+    """Local dir as is; a Hub repo id (`org/name` or `org/name@revision`, e.g.
+    `PARTAGES-CU2/cu2-icd10-dp-encoder@v0`) is downloaded or read from the HF cache."""
     if Path(model).is_dir():
         return model
     from huggingface_hub import snapshot_download
 
-    return snapshot_download(model)
+    repo, _, revision = model.partition("@")
+    return snapshot_download(repo, revision=revision or None)
 
 
 def is_z(code) -> bool:
