@@ -68,3 +68,26 @@ def reconstruct(mdp, affection, rule: dict | None) -> tuple[str, str | None]:
     if keeps_dr(mdp, rule):
         return mdp, affection
     return mdp, None
+
+
+def candidates(
+    target: str, aff_probs: dict, mdp_probs: dict, rule: dict | None, k: int
+) -> list[tuple[str, float]]:
+    """Top-k candidate targets (DR else DP), ranked across both heads.
+
+    Rank 1 is the predicted `target`. The others are ranked by their probability of
+    being the target: an `affection` code a scores P_aff(a) * (1 - P_drop), a Z code
+    coded without DR scores P_mdp(z), where P_drop is the `mdp` mass on such Z codes.
+    A Z code missed by the `mdp` top-1 can thus still appear in the list.
+    """
+    drop = {
+        z: p for z, p in mdp_probs.items() if z != DEFAULT_MDP and not keeps_dr(z, rule)
+    }
+    p_drop = sum(drop.values())
+    score = {a: p * (1 - p_drop) for a, p in aff_probs.items()}
+    for z, p in drop.items():
+        score[z] = max(score.get(z, 0.0), p)
+    ranked = sorted(score.items(), key=lambda kv: -kv[1])
+    out = [(target, score.get(target, 0.0))]
+    out += [(c, s) for c, s in ranked if c != target]
+    return out[:k]

@@ -100,12 +100,17 @@ On a dataset (multiprocessing and GPU handled by edsnlp):
 
 ```bash
 uv run python -m scripts.predict --model models/cu2-icd10-dp-encoder \
-    --data stays.parquet --out preds.parquet [--gold-dp dp --gold-dr dr]
+    --data stays.parquet --out preds.parquet [--gold-dp dp --gold-dr dr] [--topk 10]
 ```
 
 The output has one row per stay: `affection`, `mdp`, `dp`, `dr`, `target`. With the gold
 columns, it also prints the accuracy of `target` against your coding (exact code and first
 3 characters).
+
+`--topk 10` adds `candidates` and `scores`: the 10 most likely targets, `target` first.
+Both heads are ranked together, by the probability that each code ends up as the target
+(an `affection` code is weighted by the chance that `mdp` keeps it; a Z code coded without
+DR gets its `mdp` probability), so a Z code that `mdp` ranked second can still appear.
 
 ## Fine-tuning on your data
 
@@ -176,10 +181,11 @@ for training.
 
 | Test set | Stays | Exact | 3 characters | Top-10 | Top-20 |
 |---|---:|---:|---:|---:|---:|
-| PARHAF CU2 test set (fictitious patients, revised gold) | 288 | 63.9 % | 79.5 % | 89.6 % | 91.7 % |
-| MISTRAL test (synthetic stays) | 14 253 | 92.3 % | 94.3 % | 97.8 % | 97.9 % |
+| PARHAF CU2 test set (fictitious patients, revised gold) | 288 | 63.9 % | 79.5 % | 91.0 % | 93.1 % |
+| MISTRAL test (synthetic stays) | 14 253 | 92.3 % | 94.3 % | 97.7 % | 97.8 % |
 
-Top-k: the predicted `target` first, then the `affection` head's most probable codes.
+Top-k: the gold is among the `candidates` of `scripts.predict --topk k` (the predicted
+`target` first, then the most likely targets across both heads).
 
 Note styles and coding habits differ between hospitals: fine-tuning on your own coded
 stays is recommended.
