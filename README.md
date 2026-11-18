@@ -37,7 +37,7 @@ config needs the local dir. On a machine without internet, copy that folder over
 
 A BERT-base encoder (see [Training recipe](#training-recipe-of-the-released-model)) reads the
 text in sliding windows of 256 tokens; an attention pooler makes one vector per stay; two
-classification heads (MLP 1024, GELU, layer norm) read it:
+classification heads read it:
 
 | Head        | Predicts                                                                   | Labels |
 |-------------|----------------------------------------------------------------------------|-------:|
@@ -46,10 +46,20 @@ classification heads (MLP 1024, GELU, layer norm) read it:
 
 Why two heads: a stay coded "DP = Z51.1 (chemotherapy), DR = C50.9" and a stay coded
 "DP = C50.9" describe the same disease; splitting the code lets the model learn the disease
-from both. The PMSI pair is rebuilt from the two heads: `mdp = Z769` → DP = affection, no DR;
-otherwise DP = the Z code, and the affection is kept as DR or dropped according to a
-per-Z-code rule ([`data/dr_rule.json`](data/dr_rule.json)). The single code compared with a
-gold standard is **`target` = DR if any, else DP**.
+from both.
+
+The PMSI coding is rebuilt from the two predictions:
+
+| `mdp` predicts | DP | DR |
+|---|---|---|
+| `Z769` (no Z code) | the `affection` code | none |
+| a Z code usually coded with a DR (e.g. `Z511`, chemotherapy) | the Z code | the `affection` code |
+| a Z code usually coded without a DR (e.g. `Z380`, newborn) | the Z code | none |
+
+"Usually coded with a DR" is read from [`data/dr_rule.json`](data/dr_rule.json): for each Z
+code (or, failing that, its 3-character category), whether PMSI stays with this DP mostly
+carry a DR. The single code compared with a gold standard is **`target` = DR if any, else
+DP**.
 
 ## Data format
 
