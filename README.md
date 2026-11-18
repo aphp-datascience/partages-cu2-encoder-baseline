@@ -39,10 +39,13 @@ A BERT-base encoder (see [Training recipe](#training-recipe-of-the-released-mode
 text in sliding windows of 256 tokens; an attention pooler makes one vector per stay; two
 classification heads read it:
 
-| Head        | Predicts                                                                   | Labels |
-|-------------|----------------------------------------------------------------------------|-------:|
-| `affection` | the disease: the DR when the DP is a Z code, otherwise the DP (all ICD-10 codes valid as DP/DR, Z80-Z99 included) | 12 950 |
-| `mdp`       | the *mode de prise en charge*: the Z code used as DP, or `Z769` = no Z code | 720 |
+| Head        | Predicts                                              | Labels |
+|-------------|-------------------------------------------------------|-------:|
+| `affection` | the disease: the DR if the DP is a Z code, else the DP | 12 950 |
+| `mdp`       | the Z code used as DP, or `Z769` = no Z code           |    720 |
+
+`affection` covers all ICD-10 codes valid as DP or DR (Z80-Z99 included: history,
+transplant, implant states); `mdp` (*mode de prise en charge*) covers the Z codes valid as DP.
 
 Why two heads: a stay coded "DP = Z51.1 (chemotherapy), DR = C50.9" and a stay coded
 "DP = C50.9" describe the same disease; splitting the code lets the model learn the disease
