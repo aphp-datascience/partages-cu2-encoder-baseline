@@ -1,0 +1,107 @@
+# Fine-tune the released CU2 two-head encoder on your own notes (1 GPU).
+#
+#   uv run python -m scripts.train --config configs/finetune.yml --seed 42
+#
+# base_model must be a local dir: download the released model first with
+#   uv run huggingface-cli download LucasDedieu/cu2-icd10-dp-encoder \
+#       --local-dir models/cu2-icd10-dp-encoder
+#
+# Edit the `vars` below, or override any of them on the command line, e.g.
+#   --vars.train_path data/my_train --vars.max_steps 2000
+#
+# train_path / val_path: folders written by scripts/prepare_heads.py (columns
+# note_id, note_text, affection, mdp). A null target masks its head for that note.
+
+vars:
+  base_model: "models/cu2-icd10-dp-encoder"  # local dir of the released model
+  train_path: "data/my_train"
+  val_path: "data/my_dev"
+  output_dir: "artifacts"
+  label_attr: ["affection", "mdp"]
+  max_steps: 4000
+  validation_interval: 500
+  encoder_lr: 1e-5
+  head_lr: 1.7e-4
+
+nlp:
+  "@core": load
+  model: ${vars.base_model}
+
+scorer:
+  diag:
+    "@metrics": eds.doc_classification
+    label_attr: ${vars.label_attr}
+  batch_size: "150 docs"
+  speed: true
+
+optimizer:
+  "@core": optimizer !draft
+  optim: torch.optim.AdamW
+  total_steps: ${vars.max_steps}
+  groups:
+    - selector: "doc_classifier[.]embedding[.]embedding"
+      lr:
+        "@schedules": linear
+        warmup_rate: 0.1
+        start_value: 0
+        max_value: ${vars.encoder_lr}
+      weight_decay: 0.0
+    - selector: ".*"
+      lr:
+        "@schedules": linear
+        warmup_rate: 0.1
+        start_value: 0
+        max_value: ${vars.head_lr}
+      weight_decay: 0.0
+  module: ${ nlp }
+
+train_data:
+  data:
+    "@readers": parquet
+    path: ${vars.train_path}
+    converter: omop
+    doc_attributes: ${vars.label_attr}
+  shuffle: dataset
+  batch_size: "16 docs"
+  # a note is never split across sub-batches: lower this (and the batch size) on a
+  # smaller GPU; 12000 words fits an 80 GB A100
+  sub_batch_size: "12000 words"
+  pipe_names: "doc_classifier"
+
+val_data:
+  "@readers": parquet
+  path: ${vars.val_path}
+  converter: omop
+  doc_attributes: ${vars.label_attr}
+
+logger:
+  - json
+  - "@loggers": rich
+    fields:
+      step: {}
+      "per_pipe/(.*)/results/loss":
+        goal: lower_is_better
+        format: "{:.2e}"
+        goal_wait: 2
+        name: "loss"
+      "validation/(.*?)/affection/micro/f$":
+        goal: higher_is_better
+        format: "{:.2%}"
+        goal_wait: 1
+        name: "affection_acc"
+
+train:
+  nlp: ${nlp}
+  train_data:
+    - ${ train_data }
+  val_data: ${val_data}
+  scorer: ${scorer}
+  optimizer: ${optimizer}
+  max_steps: ${vars.max_steps}
+  validation_interval: ${vars.validation_interval}
+  grad_max_norm: 1.0
+  output_dir: ${vars.output_dir}
+  mixed_precision: "bf16"
+  num_workers: 0
+  logger: ${logger}
+  cpu: false

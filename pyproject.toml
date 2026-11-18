@@ -1,11 +1,15 @@
 [project]
 name = "encoder-baseline"
-version = "0.1.0"
-description = "CU2 encoder baseline: CamembertV2 + EDS-NLP doc_classifier for document-level ICD-10 (CIM-10) coding of French clinical notes (PARTAGES project)."
+version = "0.2.0"
+description = "CU2 encoder: two-head EDS-NLP doc_classifier predicting the principal diagnosis (ICD-10 / CIM-10) of French clinical notes (PARTAGES project)."
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [
-    "edsnlp",
+    "edsnlp[ml]==0.24.0",
+    "huggingface-hub",
+    "pandas",
+    "pyarrow",
+    "transformers==4.57.6",
 ]
 
 # torch is portable across machines via *conflicting extras*: pick exactly one at sync
@@ -28,10 +32,7 @@ cu118 = ["torch==2.4.1"]
 cu121 = ["torch==2.4.1"]
 cu124 = ["torch==2.4.1"]
 
-# edsnlp is pinned to the `classif_head` fork: the eds.doc_classifier / eds.doc_pooler
-# components and the eds.doc_classif metric only exist on that branch.
 [tool.uv.sources]
-edsnlp = { git = "https://github.com/aphp/edsnlp.git", rev = "classif_head" }
 torch = [
     { index = "pytorch-cpu", extra = "cpu" },
     { index = "pytorch-cu118", extra = "cu118" },
@@ -47,10 +48,6 @@ conflicts = [
 
 # The default index stays the public PyPI. torch wheels come from the PyTorch index
 # matching the chosen extra.
-#
-# Note: the preprocessing notebooks run on the AP-HP Spark/YARN cluster and need PySpark
-# plus the AP-HP-internal `edstoolbox`. These are NOT project dependencies (they are not
-# on public PyPI); AP-HP users install them separately — see docs/preprocessing.md.
 [[tool.uv.index]]
 name = "pytorch-cpu"
 url = "https://download.pytorch.org/whl/cpu"
@@ -86,20 +83,6 @@ indent-style = "space"
 
 [dependency-groups]
 dev = [
-    "datasets>=4.8.4",
-    "foldedtensor>=0.4.0",
-    "ipykernel>=7.2.0",
-    "rich-logger>=0.3.2",
-    "tokenizers>=0.22.2",      
-    "accelerate>=1.12.0",
-    "confit>=0.10.2",
-    "lxml>=6.0.2",
-    "matplotlib>=3.10.8",
-    "openpyxl>=3.1.5",
-    "pandas>=2.3.3",
-    "scikit-learn>=1.8.0",
-    "sentencepiece>=0.2.1",
-    "transformers==4.57.6",
     "ruff>=0.14.14",
     "pre-commit>=4.5.1",
 ]

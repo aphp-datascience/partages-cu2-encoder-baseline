@@ -1,164 +1,142 @@
-# CU2 Encoder Baseline
+# CU2 Encoder — principal diagnosis (ICD-10) of French clinical notes
 
-Encoder baseline for **document-level ICD-10 (CIM-10) coding of French clinical notes**, built
-on [EDS-NLP](https://github.com/aphp/edsnlp) and a CamemBERT-style transformer. This is the
-**CU2** encoder baseline of the **PARTAGES** project (CU2 = the ICD-10 diagnosis-coding use case shared
-across PARTAGES partners).
+Encoder model of the **PARTAGES** project, use case **CU2**: given a French hospital-stay
+note, predict its **principal diagnosis** in ICD-10 (CIM-10, ATIH version), as coded in the
+French PMSI (DP and, when the DP is a Z code, DR). It is an
+[EDS-NLP](https://github.com/aphp/edsnlp) pipeline (`eds.doc_classifier`, edsnlp 0.24.0) on a
+French clinical BERT, released on the Hugging Face Hub:
+**[`LucasDedieu/cu2-icd10-dp-encoder`](https://huggingface.co/LucasDedieu/cu2-icd10-dp-encoder)**.
 
-Given a clinical note, the model predicts its diagnosis codes:
+This repository holds what you need to **use it on your data**: inference, evaluation and
+fine-tuning.
 
-| Head  | Meaning                                              | Type             | Loss |
-|-------|------------------------------------------------------|------------------|------|
-| `dp`  | *Diagnostic principal* — the note's main diagnosis   | single-label     | CE   |
-| `das` | *Diagnostics associés* — comorbidities | multi-label      | BCE  |
-| `mdp` | *Mode de prise en charge* (defaults to `Z769`)    | single-label     | CE   |
+## The model in one paragraph
 
-> The **default** configuration is the multi-head setup above
-> ([`configs/config.yml`](configs/config.yml)). A simpler single-head variant predicting only
-> `dp` ([`configs/config_dp.yml`](configs/config_dp.yml)) is also provided as a complementary
-> baseline. See [docs/training.md](docs/training.md).
+The note goes through `doctolib-lab/doctobert-fr-base` (sliding windows of 256 tokens), an
+attention pooler, then two classification heads:
 
-This repo is **config-driven**: there is no training script in-tree. The whole pipeline,
-optimizer, data and training loop are described in `configs/config.yml`, a
-[confit](https://github.com/aphp/confit) config consumed by EDS-NLP's `train` / `tune` entry
-points.
+| Head        | Predicts                                                                   | Labels |
+|-------------|----------------------------------------------------------------------------|-------:|
+| `affection` | the disease: the DR when the DP is a Z code, otherwise the DP (all ICD-10 codes valid as DP/DR, Z80-Z99 included) | 12 950 |
+| `mdp`       | the *mode de prise en charge*: the Z code used as DP, or `Z769` = no Z code | 720 |
 
-## Documentation
+The PMSI pair is rebuilt from the two heads: `mdp = Z769` → DP = affection, no DR; otherwise
+DP = the Z code, and the affection is kept as DR or dropped according to a per-Z-code rule
+([`data/dr_rule.json`](data/dr_rule.json)). The single code to compare with a gold standard is
+**`target` = DR if any, else DP**.
 
-| Doc                                            | What's inside                                                        |
-|------------------------------------------------|---------------------------------------------------------------------|
-| [docs/data.md](docs/data.md)                   | Expected data format, label definitions, the CIM-10 referential, artifacts |
-| [docs/training.md](docs/training.md)           | `config.yml` walkthrough, how to launch training and hyper-param tuning |
-| [docs/inference.md](docs/inference.md)         | Loading a trained model and scoring notes                           |
-| [docs/preprocessing.md](docs/preprocessing.md) | How the parquet/label inputs are built (AP-HP Spark notebooks)      |
-
-## Model architecture
-
-The pipeline nests, from inner to outer:
-
-```
-eds.transformer        almanach/camembertv2-base (or PARTAGES-camembert-large), sliding window of 256 tokens
-      ↓
-eds.doc_pooler         attention pooling → one embedding per document
-      ↓
-eds.doc_classifier     one classification head per label (dp / das / mdp)
-```
-
-![Model architecture: document tokens → eds.transformer + eds.doc_pooler → document embedding → dp / das / mdp classification heads](docs/architecture.svg)
-
-<sub>Diagram source: [`docs/architecture.mmd`](docs/architecture.mmd) (Mermaid). Regenerate `docs/architecture.svg` after editing.</sub>
-
-Two classifier components **share their weights** through a confit reference:
-`doc_classifier` (trained on real data) and `doc_classifier_syn` (trained on synthetic
-synonym data, down-weighted). The synthetic head is excluded at inference.
+It was trained without any real patient data: synthetic notes (MISTRAL, CU0), the fictitious
+patients of [PARHAF](https://huggingface.co/datasets/HealthDataHub/PARHAF) re-annotated by an
+LLM, and the CIM-10 labels and synonyms. Fine-tuning on your own coded stays is expected to
+help a lot (different note styles, coding habits).
 
 ## Installation
 
-Dependencies are managed with [uv](https://docs.astral.sh/uv/) (Python 3.12, see
-`.python-version`).
-
-You **must** pick a torch backend that matches your hardware via a uv *extra* — a bare
-`uv sync` installs no torch:
+Python 3.12 and [uv](https://docs.astral.sh/uv/). Pick the torch build matching your
+hardware (a bare `uv sync` installs no torch):
 
 ```bash
-uv sync --extra cpu      # no GPU (local / WSL dev, CI)
-uv sync --extra cu118    # CUDA 11.8
-uv sync --extra cu121    # CUDA 12.1 (the AP-HP training cluster)
-uv sync --extra cu124    # CUDA 12.4
-uv run <cmd>             # run anything inside the project venv
+uv sync --extra cu124    # CUDA >= 12.4 (cu121, cu118 and cpu also exist)
 ```
 
-**Which one do I pick?** If your machine has **no NVIDIA GPU**, use `cpu`. Otherwise run
-`nvidia-smi` and read the **"CUDA Version"** shown top-right: choose the **highest `cuXXX` that
-is not above** it (a GPU build also runs on any newer CUDA driver). Examples: CUDA 12.1 or
-12.2 → `cu121`; CUDA 12.4 or newer (incl. 13.x) → `cu124`; CUDA 11.8 to 12.0 → `cu118`. When
-unsure, `cu121` is a safe default on most recent GPUs.
+Check `nvidia-smi` (top right, "CUDA Version") and take the highest `cuXXX` not above it.
+Inference runs on CPU but slowly; fine-tuning needs a GPU.
 
-Notes:
-
-- **`edsnlp` is pinned to a git branch** (`classif_head`): the `eds.doc_classifier`,
-  `eds.doc_pooler` components and the `eds.doc_classif` metric only exist on that fork.
-- **torch is portable via conflicting extras** (`cpu` / `cu118` / `cu121` / `cu124`).
-  For a CUDA build not listed, add an index + extra in `pyproject.toml` following the
-  existing pattern (see <https://pytorch.org/get-started/locally/>). If `uv sync` fails on
-  torch, you almost certainly forgot the `--extra`, or need a backend not yet declared — **do
-  not** rebuild the environment by hand (that silently pulls an ancient, incompatible
-  `transformers`).
-- The transformer `PARTAGES-camembert-large` referenced in the config may be access-restricted
-  on the Hugging Face Hub. Swap it for the public `almanach/camembertv2-base` if you don't have
-  access (see [docs/training.md](docs/training.md)).
-- The data-preprocessing notebooks additionally need PySpark and the AP-HP-internal
-  `edstoolbox`; these are **not** project dependencies (AP-HP only) — see
-  [docs/preprocessing.md](docs/preprocessing.md).
-
-## Data
-
-The datasets are **not AP-HP-private** — they are usable by any PARTAGES partner: **MISTRAL**
-(train/test) is shared on the PARTAGES Google Drive, the **synonym** augmentation is shipped in
-this repo (`data/synonyms.pkl`, built from public referentials), and **PARHAF** (optional
-validation) is the gated `HealthDataHub/PARHAF` dataset on Hugging Face. You can also **train on
-your own clinical notes** — see [*Using your own data*](docs/training.md#using-your-own-data).
-Full schema and label details are in [docs/data.md](docs/data.md).
-
-## Quickstart
+Get the model (the Hub repository may be private: ask the CU2 team for access, then
+`uv run huggingface-cli login`):
 
 ```bash
-# 1. Install (pick the torch extra for your hardware: cpu / cu121 / cu124)
-uv sync --extra cu121
-
-# 2. Get the data: download MISTRAL from the PARTAGES Drive, or bring your own parquet
-#    (docs/training.md#using-your-own-data). Schema: docs/data.md
-
-# 3. Edit the absolute paths and the model name in configs/config.yml (see docs/training.md)
-
-# 4. Train
-uv run python -m edsnlp.train --config configs/config.yml --seed 42
-
-# 5. Score the trained model (see docs/inference.md)
+uv run huggingface-cli download LucasDedieu/cu2-icd10-dp-encoder \
+    --local-dir models/cu2-icd10-dp-encoder
 ```
+
+The scripts accept the local dir or the repo id (downloaded on first use); the fine-tuning
+config needs the local dir. On a machine without internet, copy that folder over.
+
+## Inference
+
+```python
+import edsnlp
+from scripts.heads import load_rule, reconstruct
+
+nlp = edsnlp.load("models/cu2-icd10-dp-encoder")
+rule = load_rule("data/dr_rule.json")
+
+doc = nlp("Compte rendu d'hospitalisation ...")
+doc._.affection, doc._.mdp                              # raw head outputs
+dp, dr = reconstruct(doc._.mdp, doc._.affection, rule)  # PMSI pair
+```
+
+On a dataset (parquet with `note_id` and `note_text`; multiprocessing and GPU handled by
+edsnlp):
+
+```bash
+uv run python -m scripts.predict --model models/cu2-icd10-dp-encoder \
+    --data notes.parquet --out preds.parquet
+```
+
+The output has one row per note: `affection`, `mdp`, `dp`, `dr`, `target`. Add
+`--gold-dp <col> [--gold-dr <col>]` to print the accuracy of `target` against your coding
+(exact code and first 3 characters).
+
+## Fine-tuning on your data
+
+1. **Build the head targets** from your PMSI coding (parquet with `note_id`, `note_text`, DP
+   and optional DR columns), for a train and a validation split:
+
+   ```bash
+   uv run python -m scripts.prepare_heads --model models/cu2-icd10-dp-encoder \
+       --src my_train.parquet --out data/my_train --dp dp --dr dr
+   uv run python -m scripts.prepare_heads --model models/cu2-icd10-dp-encoder \
+       --src my_dev.parquet --out data/my_dev --dp dp --dr dr
+   ```
+
+   Codes are normalised (dots removed, upper case). A code outside a head's label space
+   masks that head for the note; the counts are printed.
+
+2. **Train** (one GPU; set the paths in the `vars` of
+   [`configs/finetune.yml`](configs/finetune.yml) or override them):
+
+   ```bash
+   uv run python -m scripts.train --config configs/finetune.yml --seed 42 \
+       --vars.train_path data/my_train --vars.val_path data/my_dev
+   ```
+
+   The model is written to `artifacts/model-last` and loads with `edsnlp.load` like the
+   released one. `scripts.train` only adds label smoothing (0.1) on the `affection` head, as
+   in the original training (`LABEL_SMOOTHING=0` to remove it).
+
+   Defaults: 4 000 steps of 16 notes, learning rate 1e-5 for the encoder and 1.7e-4 for the
+   heads, bf16. On real AP-HP stays, 30 000 coded notes gave most of the gain. A validation
+   set of 1 000-2 000 notes is enough. Out of memory: lower `sub_batch_size` (a single note is
+   never split, so very long notes may have to be removed).
+
+3. **Evaluate** before and after on the same held-out notes with `scripts.predict
+   --gold-dp ... --gold-dr ...`, passing `--model artifacts/model-last` for the fine-tuned one.
+
+The DR rule ([`data/dr_rule.json`](data/dr_rule.json)) says, for each Z code (or Z category)
+predicted as DP, whether a DR is usually coded with it. It was estimated on PMSI coding and
+can be replaced by your own (same format: `{"code": {...}, "categorie": {...}}`), or disabled
+with `--rule none` (the affection is then always kept as DR).
 
 ## Repository layout
 
 ```
-configs/config.yml     # the single source of truth: pipeline + optimizer + data + training
-data/                  # CIM-10 referential + label artifacts (.pkl) consumed by the config
-scripts/               # data-preparation scripts (AP-HP Spark) + evaluation scripts
-notebooks/             # original data-preparation notebooks + inference reference
-docs/                  # this documentation
-pyproject.toml         # dependencies (uv)
+configs/finetune.yml     fine-tuning config (edsnlp.train)
+scripts/predict.py       batch inference and accuracy
+scripts/prepare_heads.py PMSI DP/DR -> affection / mdp targets
+scripts/train.py         edsnlp.train + per-head label smoothing
+scripts/heads.py         DP/DR <-> heads, DR rule
+data/dr_rule.json        keep-the-DR rule per Z code
 ```
+
+The previous multi-head baseline (`dp` / `das` / `mdp`, edsnlp fork `classif_head`) is in the
+git history (commit `2531454`).
 
 ## Contributing
 
-Contributions from PARTAGES partners are welcome. If you clone the repo and want to propose a
-pull request, install the [pre-commit](https://pre-commit.com/) hooks once after `uv sync` so
-your changes are linted and formatted automatically on every commit:
-
-```bash
-uv run pre-commit install        # register the git hook (one-time)
-```
-
-The hooks run [ruff](https://docs.astral.sh/ruff/) — the linter (with import sorting and
-auto-fix) and the formatter (line length 88, double quotes; notebooks excluded). To check the
-whole tree without committing:
-
-```bash
-uv run pre-commit run --all-files
-```
-
-You can also run ruff directly:
-
-```bash
-uv run ruff check .              # lint (add --fix to auto-fix)
-uv run ruff format .             # format
-```
-
-Work on a **feature branch** rather than committing to `main`, then open a pull request against
-`main`. Name the branch `<type>/<short-description>`, reusing the commit-type prefixes
-(`feat/`, `fix/`, `docs/`, `refactor/`, `chore/`) — for example `feat/das-synthetic-head` or
-`docs/architecture-diagram`.
-
-Please make sure `pre-commit run --all-files` passes before opening a pull request.
+Work on a branch (`feat/…`, `fix/…`, `docs/…`) and open a pull request against `main`. Lint
+with `uv run pre-commit install` once, or `uv run ruff check . && uv run ruff format .`.
 
 ## License
 

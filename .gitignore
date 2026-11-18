@@ -12,3 +12,6 @@ __pycache__/
 # Claude Code (local)
 .claude/
 CLAUDE.md
+
+# downloaded models, local data
+models/

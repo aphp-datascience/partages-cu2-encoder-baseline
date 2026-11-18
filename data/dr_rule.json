@@ -1,0 +1,26 @@
+{
+ "categorie": {
+  "Z00": false, "Z01": false, "Z04": true, "Z08": true, "Z09": true, "Z29": true, "Z30": false, "Z31": false,
+  "Z35": false, "Z38": false, "Z39": false, "Z40": false, "Z41": false, "Z42": false, "Z43": false, "Z44": true,
+  "Z45": true, "Z46": true, "Z47": false, "Z48": false, "Z49": true, "Z50": true, "Z51": true, "Z52": false,
+  "Z53": false, "Z71": true, "Z74": false, "Z75": false, "Z76": false, "Z83": false, "Z86": false, "Z87": false,
+  "Z94": false, "Z95": false, "Z96": true, "Z99": true
+ },
+ "code": {
+  "Z006": false, "Z015": false, "Z04800": false, "Z04801": false, "Z04802": true, "Z04880": true, "Z080": true,
+  "Z082": true, "Z087": true, "Z088": true, "Z089": true, "Z090": true, "Z092": true, "Z093": true, "Z097": true,
+  "Z098": true, "Z099": true, "Z291": true, "Z292": false, "Z302": false, "Z305": false, "Z355": false,
+  "Z358": false, "Z380": false, "Z3908": false, "Z411": false, "Z4188": true, "Z420": false, "Z421": true,
+  "Z424": false, "Z431": false, "Z432": false, "Z433": false, "Z448": true, "Z450": false, "Z451": true,
+  "Z452": false, "Z4580": false, "Z4584": true, "Z4588": false, "Z466": false, "Z468": true, "Z470": false,
+  "Z4780": false, "Z480": false, "Z488": false, "Z489": false, "Z490": true, "Z502": true, "Z503": true,
+  "Z508": true, "Z5101": true, "Z511": true, "Z512": true, "Z5130": true, "Z5131": true, "Z514": true,
+  "Z515": true, "Z516": true, "Z5188": true, "Z524": false, "Z530": false, "Z538": false, "Z713": true,
+  "Z742": false, "Z751": false, "Z762": false, "Z876": false, "Z940": false, "Z941": false, "Z942": false,
+  "Z944": false, "Z94800": false, "Z94802": false, "Z94803": false, "Z94804": false, "Z94809": false,
+  "Z9481": false, "Z951": false, "Z952": false, "Z9588": false, "Z993": true
+ },
+ "min_cat": 10,
+ "min_code": 15,
+ "seuil": 0.5
+}
