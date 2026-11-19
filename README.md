@@ -215,8 +215,8 @@ else DP) with the DR rule; none of these stays were used for training.
 
 **Physician-reviewed AP-HP stays (most reliable gold).** A sample of AP-HP stays whose PMSI
 coding was reviewed by physicians (May 2026), several reviewers for part of them. The text is
-built like the AP-HP training cohort: CCAM header + discharge summaries (CRH) and operative
-reports (CR-OP) of the stay. Three views of the same set:
+built as asked of partner hospitals: CCAM header + consultation reports (CRC), discharge
+summaries (CRH) and operative reports (CR-OP) of the stay. Three views of the same set:
 
 - **flattened**: every annotation is a row (a stay reviewed twice counts twice);
 - **agreement + single**: one row per stay, keeping stays reviewed once and stays whose
@@ -229,10 +229,10 @@ Each view is scored on the whole ICD-10 (**ICD-10**) and on the surgical scope o
 
 | View | Scope | Stays | Exact | 3 char. | Top-10 | Top-20 | 3 char. top-10 | 3 char. top-20 |
 |---|---|---:|---:|---:|---:|---:|---:|---:|
-| flattened | ICD-10 | 309 | 40.4 % | 51.5 % | 68.9 % | 74.1 % | 78.6 % | 83.2 % |
-| flattened | surgery | 258 | 48.8 % | 57.4 % | 78.7 % | 81.4 % | 84.5 % | 86.8 % |
-| agreement + single | ICD-10 | 194 | 40.7 % | 52.1 % | 69.6 % | 75.8 % | 78.9 % | 83.0 % |
-| agreement + single | surgery | 166 | 48.2 % | 56.6 % | 78.3 % | 80.7 % | 83.1 % | 85.5 % |
+| flattened | ICD-10 | 310 | 40.3 % | 51.0 % | 68.4 % | 73.6 % | 77.7 % | 82.6 % |
+| flattened | surgery | 259 | 48.6 % | 56.8 % | 77.2 % | 80.7 % | 82.6 % | 86.1 % |
+| agreement + single | ICD-10 | 195 | 40.5 % | 51.8 % | 69.2 % | 75.4 % | 78.5 % | 82.6 % |
+| agreement + single | surgery | 167 | 47.9 % | 56.3 % | 76.6 % | 80.2 % | 82.0 % | 85.0 % |
 | agreement | ICD-10 | 47 | 68.1 % | 70.2 % | 89.4 % | 91.5 % | 91.5 % | 93.6 % |
 | agreement | surgery | 42 | 76.2 % | 76.2 % | 95.2 % | 95.2 % | 95.2 % | 95.2 % |
 
