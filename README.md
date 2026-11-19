@@ -79,9 +79,25 @@ One parquet file (or a folder of parquet files), **one row per hospital stay**:
 | `note_text` | always                         | the text of the stay: its reports (discharge summary, operative report…) concatenated in one string |
 | `dp`        | fine-tuning, evaluation        | PMSI principal diagnosis, ICD-10 code (`C509` or `C50.9`) |
 | `dr`        | fine-tuning, evaluation        | PMSI related diagnosis, empty or null when none |
+| `acts`      | recommended, always            | the CCAM procedure codes of the stay (list, or a string such as `NFFC004;ZBQK002`); empty when none |
 
-Other column names are fine: pass them with `--dp` / `--dr` (`prepare_heads`) or
-`--gold-dp` / `--gold-dr` (`predict`). Inference only needs `note_id` and `note_text`.
+Other column names are fine: pass them with `--dp` / `--dr` / `--acts` (`prepare_heads`) or
+`--gold-dp` / `--gold-dr` / `--acts` (`predict`). Inference only needs `note_id`,
+`note_text` and, ideally, `acts`.
+
+**Procedures (CCAM acts).** The model was trained on texts whose first line lists the
+procedures of the stay, then a blank line, then the reports:
+
+```
+Actes (CCAM) : NFFC004 - Méniscectomie latérale ou médiale du genou, par arthroscopie
+
+Compte rendu opératoire ...
+```
+
+(`Actes (CCAM) : non renseigné` when the stay has none). With `--acts <column>`,
+`prepare_heads` and `predict` build this line from the codes, using the CCAM 2026
+nomenclature shipped in [`data/ccam_2026.csv`](data/ccam_2026.csv) (ATIH); texts that already
+start with it are left as is. Give the same line at fine-tuning and at inference.
 
 ## Inference
 
@@ -89,10 +105,14 @@ Other column names are fine: pass them with `--dp` / `--dr` (`prepare_heads`) or
 import edsnlp
 from scripts.heads import load_rule, reconstruct
 
+from scripts.acts import load_ccam, with_acts
+
 nlp = edsnlp.load("models/cu2-icd10-dp-encoder")
 rule = load_rule("data/dr_rule.json")
+ccam = load_ccam()
 
-doc = nlp("Compte rendu d'hospitalisation ...")
+text = with_acts("Compte rendu d'hospitalisation ...", ["NFFC004"], ccam)  # CCAM header
+doc = nlp(text)
 doc._.affection, doc._.mdp                              # raw head outputs
 dp, dr = reconstruct(doc._.mdp, doc._.affection, rule)  # PMSI pair
 ```
@@ -101,7 +121,7 @@ On a dataset (multiprocessing and GPU handled by edsnlp):
 
 ```bash
 uv run python -m scripts.predict --model models/cu2-icd10-dp-encoder \
-    --data stays.parquet --out preds.parquet [--gold-dp dp --gold-dr dr] [--topk 10]
+    --data stays.parquet --out preds.parquet --acts acts [--gold-dp dp --gold-dr dr] [--topk 10]
 ```
 
 The output has one row per stay: `affection`, `mdp`, `dp`, `dr`, `target`. With the gold
@@ -120,9 +140,9 @@ DR gets its `mdp` probability), so a Z code that `mdp` ranked second can still a
 
    ```bash
    uv run python -m scripts.prepare_heads --model models/cu2-icd10-dp-encoder \
-       --src my_train.parquet --out data/my_train
+       --src my_train.parquet --out data/my_train --acts acts
    uv run python -m scripts.prepare_heads --model models/cu2-icd10-dp-encoder \
-       --src my_dev.parquet --out data/my_dev
+       --src my_dev.parquet --out data/my_dev --acts acts
    ```
 
    Codes are normalised (dots removed, upper case). A code outside a head's label space
@@ -194,9 +214,33 @@ else DP) with the DR rule; none of these stays were used for training.
 | MISTRAL test (synthetic stays) | 14 253 | 92.4 % | 94.4 % | 97.6 % | 97.8 % |
 | AP-HP stays, before any fine-tuning | 90 848 | 32.4 % | 47.7 % | 60.0 % | 65.9 % |
 
-Compared with `v0`, `v0.1` is on par on real AP-HP stays (32.4 vs 32.7 % exact; better on rare
-codes, slightly worse on frequent ones) and ahead on physician-reviewed stays where annotators
-agree (+4 to +6 points, small sets).
+**Physician-reviewed AP-HP stays (most reliable gold).** A sample of AP-HP stays whose PMSI
+coding was reviewed by physicians (May 2026), several reviewers for part of them. The text is
+built like the AP-HP training cohort: CCAM header + discharge summaries (CRH) and operative
+reports (CR-OP) of the stay. Three views of the same set:
+
+- **flattened**: every annotation is a row (a stay reviewed twice counts twice);
+- **agreement + single**: one row per stay, keeping stays reviewed once and stays whose
+  reviewers agree on the target (stays where they disagree are dropped);
+- **agreement**: only stays reviewed by several physicians who agree (the cleanest gold, but
+  few stays).
+
+Each view is scored on the whole ICD-10 (**ICD-10**) and on the surgical scope of 3 568 codes
+(**surgery**: stays whose gold is one of these codes, predictions restricted to them).
+
+| View | Scope | Stays | Exact | 3 char. | Top-10 | Top-20 | 3 char. top-10 | 3 char. top-20 |
+|---|---|---:|---:|---:|---:|---:|---:|---:|
+| flattened | ICD-10 | 309 | 40.4 % | 51.5 % | 68.9 % | 74.1 % | 78.6 % | 83.2 % |
+| flattened | surgery | 258 | 48.8 % | 57.4 % | 78.7 % | 81.4 % | 84.5 % | 86.8 % |
+| agreement + single | ICD-10 | 194 | 40.7 % | 52.1 % | 69.6 % | 75.8 % | 78.9 % | 83.0 % |
+| agreement + single | surgery | 166 | 48.2 % | 56.6 % | 78.3 % | 80.7 % | 83.1 % | 85.5 % |
+| agreement | ICD-10 | 47 | 68.1 % | 70.2 % | 89.4 % | 91.5 % | 91.5 % | 93.6 % |
+| agreement | surgery | 42 | 76.2 % | 76.2 % | 95.2 % | 95.2 % | 95.2 % | 95.2 % |
+
+Before any fine-tuning. Small sets: the 95 % confidence interval is about ±7 points on ~200
+stays and ±13 points on ~50. Compared with `v0`, `v0.1` is on par on the large AP-HP test set
+(32.4 vs 32.7 % exact; better on rare codes, slightly worse on frequent ones) and ahead on the
+reviewed stays where annotators agree (+4 to +6 points, not significant).
 
 Top-k: the gold is among the `candidates` of `scripts.predict --topk k` (the predicted
 `target` first, then the most likely targets across both heads).
@@ -213,7 +257,9 @@ scripts/predict.py       batch inference and accuracy
 scripts/prepare_heads.py PMSI DP/DR -> affection / mdp targets
 scripts/train.py         edsnlp.train + per-head label smoothing
 scripts/heads.py         DP/DR <-> heads, DR rule
+scripts/acts.py          CCAM procedure header of the input text
 data/dr_rule.json        keep-the-DR rule per Z code
+data/ccam_2026.csv       CCAM 2026 nomenclature (ATIH): code -> label
 ```
 
 The previous multi-head baseline (`dp` / `das` / `mdp`, edsnlp fork `classif_head`) is in the

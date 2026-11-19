@@ -40,6 +40,10 @@ def main() -> None:
     )
     ap.add_argument("--gold-dp", help="column holding the gold PMSI DP (optional)")
     ap.add_argument("--gold-dr", help="column holding the gold PMSI DR (optional)")
+    ap.add_argument(
+        "--acts",
+        help="column of CCAM codes: the 'Actes (CCAM)' header is added to note_text",
+    )
     ap.add_argument("--topk", type=int, default=0, help="also output K candidates")
     ap.add_argument("--num-cpu", type=int, default=4, help="CPU workers (tokenisation)")
     args = ap.parse_args()
@@ -50,6 +54,8 @@ def main() -> None:
     missing = {"note_id", "note_text"} - cols
     if missing:
         raise SystemExit(f"{args.data}: missing columns {sorted(missing)}")
+    if args.acts and args.acts not in cols:
+        raise SystemExit(f"{args.data}: no column {args.acts!r}")
     gold = {c: f"gold_{c}" for c in (args.gold_dp, args.gold_dr) if c}
     for c in gold:
         if c not in cols:
@@ -59,15 +65,29 @@ def main() -> None:
     if args.topk:  # keep the probabilities of each head's top labels
         pipe = nlp.get_pipe("doc_classifier")
         pipe.store_probs, pipe.probs_topk = True, max(args.topk, 20)
-    docs = (
-        edsnlp.data.read_parquet(
+    if args.acts:  # add the CCAM header, as in training
+        import pandas as pd
+
+        from scripts.acts import load_ccam, with_acts
+
+        frame = pd.concat([pd.read_parquet(f) for f in files], ignore_index=True)
+        ccam = load_ccam()
+        frame["note_text"] = [
+            with_acts(t, a, ccam)
+            for t, a in zip(frame["note_text"], frame[args.acts], strict=True)
+        ]
+        reader = edsnlp.data.from_pandas(
+            frame, tokenizer=nlp.tokenizer, converter="omop", doc_attributes=gold
+        )
+    else:
+        reader = edsnlp.data.read_parquet(
             str(args.data),
             tokenizer=nlp.tokenizer,
             converter="omop",
             doc_attributes=gold,
         )
-        .map_pipeline(nlp)
-        .set_processing(num_cpu_workers=args.num_cpu, show_progress=True)
+    docs = reader.map_pipeline(nlp).set_processing(
+        num_cpu_workers=args.num_cpu, show_progress=True
     )
     df = docs.to_pandas(
         converter="omop",
