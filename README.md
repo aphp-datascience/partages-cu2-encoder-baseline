@@ -4,7 +4,7 @@ Encoder model of the **PARTAGES** project, use case **CU2**: given the text of a
 hospital stay, predict its **principal diagnosis** in ICD-10 (CIM-10, ATIH version), as coded
 in the French PMSI (DP and, when the DP is a Z code, DR). It is an
 [EDS-NLP](https://github.com/aphp/edsnlp) pipeline (`eds.doc_classifier`, edsnlp 0.24.0),
-released on the Hugging Face Hub (current version: `v0`):
+released on the Hugging Face Hub (current version: `v0.1`):
 **[`PARTAGES-CU2/cu2-icd10-dp-encoder`](https://huggingface.co/PARTAGES-CU2/cu2-icd10-dp-encoder)**.
 
 This repository holds what you need to **use it on your data**: inference, evaluation and
@@ -26,12 +26,12 @@ Get the model (the Hub repository may be private: ask the CU2 team for access, t
 `uv run huggingface-cli login`):
 
 ```bash
-uv run huggingface-cli download PARTAGES-CU2/cu2-icd10-dp-encoder --revision v0 \
+uv run huggingface-cli download PARTAGES-CU2/cu2-icd10-dp-encoder --revision v0.1 \
     --local-dir models/cu2-icd10-dp-encoder
 ```
 
 The scripts accept the local dir or the repo id, optionally with a revision
-(`PARTAGES-CU2/cu2-icd10-dp-encoder@v0`, downloaded on first use); the fine-tuning
+(`PARTAGES-CU2/cu2-icd10-dp-encoder@v0.1`, downloaded on first use); the fine-tuning
 config needs the local dir. On a machine without internet, copy that folder over.
 
 ## Architecture
@@ -165,8 +165,9 @@ No real patient data was used. One training run, all weights trained:
     (32 stays per batch, scale 1);
   - fictitious PARHAF patients ([HealthDataHub/PARHAF](https://huggingface.co/datasets/HealthDataHub/PARHAF),
     CC BY 4.0) and CU0 synthetic stays derived from them, 6 440 stays, labelled in DP/DR
-    by an LLM teacher (Qwen3.8-27B with a PMSI coding procedure) over the whole ICD-10 (4 stays per
-    batch, scale 1);
+    over the whole ICD-10 by an LLM agent (Mistral Large 4 with ICD-10 / MCO-guide tools and a
+    PMSI coding procedure; 80-82 % exact on gold-labelled PARHAF test sets) (4 stays per batch,
+    scale 1);
   - ICD-10 labels and synonyms of every code, 168 313 short texts (128 per batch, scale 0.1).
 - **Optimisation**: AdamW, 12 000 steps, linear schedules with warm-up, learning rate 3e-5
   for the encoder and 5e-4 for the pooler and heads, gradient clipping 1.0, bf16; label
@@ -176,19 +177,24 @@ No real patient data was used. One training run, all weights trained:
   (row of a code = mean hidden vector of its PMSI label, ICD-10 inclusion notes and
   synonyms; bias = log prior frequency of the code). Four variants were compared on the
   same data (base recipe, this one, an auxiliary 3-character head, masking the PARHAF/CU0
-  stream); this one was kept as v0: no significant loss on any test set, and it helps
-  rare codes on real stays (codes seen 1-5 times in training: +3.6 points, exact).
+  stream); this one was kept: no significant loss on any test set, and it helps rare codes
+  on real stays (codes seen 1-5 times in training: +3.6 points, exact).
+- **Versions**: `v0` used labels from a Qwen 27B teacher for the PARHAF / CU0 stream; `v0.1`
+  only replaces them by the Mistral Large 4 labels (PARHAF CU2 test set: +2.6 points exact,
+  paired over 2 seeds).
 
 ## Results
 
-Model `PARTAGES-CU2/cu2-icd10-dp-encoder`, revision `v0`. Accuracy of `target` (DR if any,
+Model `PARTAGES-CU2/cu2-icd10-dp-encoder`, revision `v0.1`. Accuracy of `target` (DR if any,
 else DP) with the DR rule; none of these stays were used for training.
 
 | Test set | Stays | Exact | 3 characters | Top-10 | Top-20 |
 |---|---:|---:|---:|---:|---:|
-| PARHAF CU2 test set (fictitious patients, revised gold) | 288 | 65.3 % | 80.6 % | 90.6 % | 94.1 % |
-| MISTRAL test (synthetic stays) | 14 253 | 92.3 % | 94.3 % | 97.6 % | 97.7 % |
-| AP-HP stays, before any fine-tuning | 90 848 | 32.7 % | 48.1 % | 60.7 % | 66.5 % |
+| PARHAF CU2 test set (fictitious patients, revised gold) | 288 | 68.4 % | 82.3 % | 92.0 % | 94.8 % |
+| MISTRAL test (synthetic stays) | 14 253 | 92.4 % | 94.4 % | 97.6 % | 97.8 % |
+
+On real AP-HP stays before any fine-tuning, `v0` reached 32.7 % exact (90 848 stays); `v0.1` is
+being measured.
 
 Top-k: the gold is among the `candidates` of `scripts.predict --topk k` (the predicted
 `target` first, then the most likely targets across both heads).
