@@ -245,8 +245,7 @@ Top-k: the gold is among the `candidates` of `scripts.predict --topk k` (the pre
 `target` first, then the most likely targets across both heads).
 
 Note styles and coding habits differ between hospitals: fine-tuning on your own coded
-stays is recommended (on AP-HP stays, earlier versions gained 9 to 15 points with 30 000
-coded stays).
+stays is recommended: on AP-HP stays it brought a clear gain over the released model.
 
 ## Repository layout
 
