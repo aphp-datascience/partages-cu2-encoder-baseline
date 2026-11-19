@@ -76,7 +76,7 @@ One parquet file (or a folder of parquet files), **one row per hospital stay**:
 | Column      | Needed for                     | Content |
 |-------------|--------------------------------|---------|
 | `note_id`   | always                         | unique id of the stay (string or int) |
-| `note_text` | always                         | the text of the stay: its reports (discharge summary, operative report…) concatenated in one string |
+| `note_text` | always                         | the reports of the stay, in chronological order, separated by a blank line: consultation reports (CRC), discharge summaries (CRH) and operative reports (CR-OP) |
 | `dp`        | fine-tuning, evaluation        | PMSI principal diagnosis, ICD-10 code (`C509` or `C50.9`) |
 | `dr`        | fine-tuning, evaluation        | PMSI related diagnosis, empty or null when none |
 | `acts`      | recommended, always            | the CCAM procedure codes of the stay (list, or a string such as `NFFC004;ZBQK002`); empty when none |
@@ -212,7 +212,6 @@ else DP) with the DR rule; none of these stays were used for training.
 |---|---:|---:|---:|---:|---:|
 | PARHAF CU2 test set (fictitious patients, revised gold) | 288 | 68.4 % | 82.3 % | 92.0 % | 94.8 % |
 | MISTRAL test (synthetic stays) | 14 253 | 92.4 % | 94.4 % | 97.6 % | 97.8 % |
-| AP-HP stays, before any fine-tuning | 90 848 | 32.4 % | 47.7 % | 60.0 % | 65.9 % |
 
 **Physician-reviewed AP-HP stays (most reliable gold).** A sample of AP-HP stays whose PMSI
 coding was reviewed by physicians (May 2026), several reviewers for part of them. The text is
