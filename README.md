@@ -192,9 +192,11 @@ else DP) with the DR rule; none of these stays were used for training.
 |---|---:|---:|---:|---:|---:|
 | PARHAF CU2 test set (fictitious patients, revised gold) | 288 | 68.4 % | 82.3 % | 92.0 % | 94.8 % |
 | MISTRAL test (synthetic stays) | 14 253 | 92.4 % | 94.4 % | 97.6 % | 97.8 % |
+| AP-HP stays, before any fine-tuning | 90 848 | 32.4 % | 47.7 % | 60.0 % | 65.9 % |
 
-On real AP-HP stays before any fine-tuning, `v0` reached 32.7 % exact (90 848 stays); `v0.1` is
-being measured.
+Compared with `v0`, `v0.1` is on par on real AP-HP stays (32.4 vs 32.7 % exact; better on rare
+codes, slightly worse on frequent ones) and ahead on physician-reviewed stays where annotators
+agree (+4 to +6 points, small sets).
 
 Top-k: the gold is among the `candidates` of `scripts.predict --topk k` (the predicted
 `target` first, then the most likely targets across both heads).
