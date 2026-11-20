@@ -30,9 +30,12 @@ patient data (see [Technical details](#technical-details)).
 
 ## 1. Installation
 
-**Hardware.** A machine with an NVIDIA GPU is strongly recommended: inference on CPU works but
-is slow, and fine-tuning needs a GPU (the reference fine-tuning used one 80 GB A100; smaller
-GPUs work with smaller batches, see the [FAQ](#faq)).
+**Hardware.** The model is small (a BERT-base encoder, about 110 M parameters): no large
+GPU is needed.
+
+- **Inference:** any recent NVIDIA GPU is enough; a CPU also works for small volumes (slower).
+- **Fine-tuning:** a GPU is recommended. The reference fine-tuning used one A100, but a
+  smaller GPU works with smaller batches (see the [FAQ](#faq)).
 
 **Software.** Python 3.12 and [uv](https://docs.astral.sh/uv/). Pick the PyTorch build that
 matches your GPU driver (`nvidia-smi`, top right "CUDA Version": take the highest `cuXXX` not
@@ -188,9 +191,9 @@ points on ~50.
   (the first line of its training texts listed the acts).
 - **Our stays have no DR column.** Pass only `--dp` (or `--gold-dp`): the DR is then
   considered absent.
-- **Out of GPU memory during fine-tuning.** Lower `batch_size` and `sub_batch_size` in
-  `configs/finetune.yml`. A single stay is never split across batches, so very long stays
-  may have to be removed from the training file.
+- **Out of GPU memory during fine-tuning** (e.g. on a 16-24 GB GPU). Lower `batch_size` and
+  `sub_batch_size` in `configs/finetune.yml`. A single stay is never split across batches, so
+  very long stays may have to be removed from the training file.
 - **Which version should we use?** The latest tag (`v0.1`). Pin it (`--revision v0.1`) so that
   your results stay reproducible when a new version is released.
 - **Can the model predict all our codes?** It knows about 13 000 ICD-10 codes (all codes valid
